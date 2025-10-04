@@ -1,1 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>⚔️ Battle Box</title>
+
+    <!-- Favicon (optional tiny chest icon) -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' fill='%236b3e26'/%3E%3Crect x='4' y='8' width='24' height='16' fill='%23b87333'/%3E%3Crect x='14' y='8' width='4' height='16' fill='%23d9a066'/%3E%3C/svg%3E"
+    />
+
+    <!-- Fonts & meta -->
+    <meta name="description" content="Open pixel-art chests to collect rare weapons in Battle Box!" />
+    <meta name="theme-color" content="#111827" />
+  </head>
+
+  <body class="bg-gray-900 text-white">
+    <div id="root"></div>
+
+    <!-- Tailwind & React scripts -->
+    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Optional: subtle background pixel grid -->
+    <style>
+      body {
+        background-image: linear-gradient(
+            rgba(255, 255, 255, 0.03) 1px,
+            transparent 1px
+          ),
+          linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.03) 1px,
+            transparent 1px
+          );
+        background-size: 32px 32px;
+        image-rendering: pixelated;
+        font-family: "Press Start 2P", monospace;
+      }
+
+      @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+    </style>
+  </body>
+</html>
 
