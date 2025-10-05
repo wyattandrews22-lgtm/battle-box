@@ -1,113 +1,176 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Battle Box</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚔️ Battle Box ⚔️</title>
   <style>
     body {
-      background-color: #1d1f21;
-      color: white;
+      background-color: #101020;
+      color: #fff;
       font-family: 'Press Start 2P', monospace;
-      text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
       margin: 0;
-      padding: 0;
     }
-    h1 {
-      margin-top: 20px;
-      font-size: 24px;
+    .game {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 40px;
     }
-    canvas {
-      image-rendering: pixelated;
-      margin-top: 20px;
-      background: #2b2b2b;
-      border: 4px solid #444;
-      border-radius: 10px;
+    .left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .chest {
+      width: 120px;
+      height: 120px;
+      background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAACXBIWXMAAAsTAAALEwEAmpwYAAAETklEQVR4nO3bzW0TQRSA4feYEiD5lLAAihkYiU0SCGsRTAqHgEUkPMS6Q0sFDLIzCT5AWwsKzPYtv5cY++Xuz9cefnN7dp7B37jjdbnQAAAAAAAAAAAAAAAAAAAAAAAIAv7z5Dg8M41s+qFj89cXtzvqG8kzCfxdXgL4n8ZrCd1Nv3Okv5koH8b7O0TPmcXxvNNgC1Q7mZ8yW2z4mnGWSeXwn2b4W5s8Yd7fs4d5fjHOfG0ObXnNnh4pYSmfHysZ7LxzAoeY7id3O+U69PzJWlYmdNnHK2nujfRfL8Z9s4fy6/KHqHcHeM2D2gV4V+4q9xPz7pVjSLOZ1x9H2Xs1NcfO1yZxZ/3Zdfyt6wf1ztHnvuhmNR7N/btcYw8Z7vHHcRuvNubHOM7/3nGMRvW+38AAAAAAAAAAAAAAAAAAAAAAAAAAADwcf4DRZ+jH6FStZMAAAAASUVORK5CYII=') no-repeat center/contain;
+      margin-bottom: 10px;
     }
     button {
-      font-family: inherit;
-      font-size: 14px;
-      background: #444;
+      background: #d47c1b;
+      border: 2px solid #ffb347;
+      padding: 10px 20px;
       color: white;
-      border: 2px solid #666;
-      border-radius: 6px;
-      padding: 8px 16px;
+      font-family: 'Press Start 2P', monospace;
       cursor: pointer;
-      margin-top: 20px;
+      box-shadow: 3px 3px #000;
+      transition: transform 0.1s;
     }
-    button:hover {
-      background: #666;
+    button:active {
+      transform: translateY(2px);
+    }
+    .collection {
+      border: 2px solid #ffb347;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(5, 60px);
+      gap: 10px;
+      background-color: #181830;
+    }
+    .weapon {
+      width: 60px;
+      height: 60px;
+      border: 2px solid #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #222;
+      cursor: pointer;
+    }
+    .weapon.selected {
+      border: 2px solid #ffb347;
+    }
+    .rarity-common { filter: brightness(0.8); }
+    .rarity-uncommon { border-color: green; }
+    .rarity-rare { border-color: blue; }
+    .rarity-epic { border-color: purple; }
+    .rarity-legendary { border-color: gold; }
+    h1 {
+      text-align: center;
+      color: #ffb347;
     }
   </style>
 </head>
 <body>
-  <h1>Battle Box</h1>
-  <canvas id="gameCanvas" width="256" height="256"></canvas>
-  <div><button id="openBtn">Open Chest</button></div>
+  <div class="game">
+    <div class="left">
+      <h1>⚔️ Battle Box ⚔️</h1>
+      <div class="chest"></div>
+      <p>Gold: <span id="gold">50</span></p>
+      <button id="openChest">Open Chest (10g)</button>
+      <button id="sellButton">Sell Selected</button>
+    </div>
+
+    <div>
+      <h2>Collection Book</h2>
+      <div id="collection" class="collection"></div>
+    </div>
+  </div>
 
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    // Simple 20 weapon list with rarities
     const weapons = [
-      { name: 'Rusty Sword', rarity: 'Common' },
-      { name: 'Wooden Dagger', rarity: 'Common' },
-      { name: 'Iron Axe', rarity: 'Uncommon' },
-      { name: 'Steel Mace', rarity: 'Uncommon' },
-      { name: 'Silver Bow', rarity: 'Rare' },
-      { name: 'Magic Wand', rarity: 'Rare' },
-      { name: 'Golden Hammer', rarity: 'Epic' },
-      { name: 'Dragon Spear', rarity: 'Epic' },
-      { name: 'Shadow Blade', rarity: 'Legendary' },
-      { name: 'Phoenix Staff', rarity: 'Legendary' },
-      { name: 'Battle Axe', rarity: 'Common' },
-      { name: 'Crossbow', rarity: 'Uncommon' },
-      { name: 'Blazing Sword', rarity: 'Rare' },
-      { name: 'Frost Wand', rarity: 'Rare' },
-      { name: 'Storm Hammer', rarity: 'Epic' },
-      { name: 'Crystal Dagger', rarity: 'Epic' },
-      { name: 'Eternal Bow', rarity: 'Legendary' },
-      { name: 'Vortex Blade', rarity: 'Legendary' },
-      { name: 'Silver Pike', rarity: 'Uncommon' },
-      { name: 'Bronze Club', rarity: 'Common' }
+      'Iron Sword','Steel Sword','Wooden Bow','Crossbow','Magic Wand','Fire Staff','Dagger','Axe','Hammer','Longsword',
+      'Greatsword','Katana','Trident','Spear','Crystal Sword','Dark Blade','Golden Axe','Lightning Bow','Shadow Dagger','Divine Hammer'
     ];
-
-    const rarityColors = {
-      'Common': '#aaa',
-      'Uncommon': '#00ff88',
-      'Rare': '#0099ff',
-      'Epic': '#cc00ff',
-      'Legendary': '#ffcc00'
+    const rarities = ['common','uncommon','rare','epic','legendary'];
+    const dropRates = {
+      common: 0.5,
+      uncommon: 0.3,
+      rare: 0.15,
+      epic: 0.045,
+      legendary: 0.005
+    };
+    const sellValues = {
+      common: 5,
+      uncommon: 10,
+      rare: 20,
+      epic: 50,
+      legendary: 100
     };
 
-    // Simple sprite-like chest (drawn with rectangles for now)
-    function drawChest(opened = false) {
-      ctx.fillStyle = '#6b3e1f';
-      ctx.fillRect(80, 100, 96, 64);
-      ctx.strokeStyle = '#3d2612';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(80, 100, 96, 64);
-      if (!opened) {
-        ctx.fillStyle = '#c49a6c';
-        ctx.fillRect(80, 90, 96, 20);
-        ctx.strokeRect(80, 90, 96, 20);
+    let gold = 50;
+    let collection = [];
+    let selectedIndex = null;
+
+    const goldEl = document.getElementById('gold');
+    const collectionEl = document.getElementById('collection');
+
+    function updateGold() { goldEl.textContent = gold; }
+
+    function getRarity() {
+      const r = Math.random();
+      let total = 0;
+      for (let key in dropRates) {
+        total += dropRates[key];
+        if (r < total) return key;
       }
+      return 'common';
     }
 
-    function openChest() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawChest(true);
-      const weapon = weapons[Math.floor(Math.random() * weapons.length)];
-      ctx.fillStyle = rarityColors[weapon.rarity];
-      ctx.font = '10px monospace';
-      ctx.fillText(weapon.name, 60, 200);
-      ctx.fillText(weapon.rarity, 90, 220);
+    function renderCollection() {
+      collectionEl.innerHTML = '';
+      collection.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.classList.add('weapon', 'rarity-' + item.rarity);
+        if (selectedIndex === i) div.classList.add('selected');
+        div.title = `${item.name} (${item.rarity})`;
+        div.textContent = '⚔️';
+        div.onclick = () => {
+          if (selectedIndex === i) selectedIndex = null; else selectedIndex = i;
+          renderCollection();
+        };
+        collectionEl.appendChild(div);
+      });
     }
 
-    drawChest(false);
+    document.getElementById('openChest').onclick = () => {
+      if (gold < 10) return alert('Not enough gold!');
+      gold -= 10;
+      const rarity = getRarity();
+      const name = weapons[Math.floor(Math.random() * weapons.length)];
+      collection.push({ name, rarity });
+      updateGold();
+      renderCollection();
+    };
 
-    document.getElementById('openBtn').addEventListener('click', openChest);
+    document.getElementById('sellButton').onclick = () => {
+      if (selectedIndex === null) return alert('Select a weapon first!');
+      const item = collection[selectedIndex];
+      gold += sellValues[item.rarity];
+      collection.splice(selectedIndex, 1);
+      selectedIndex = null;
+      updateGold();
+      renderCollection();
+    };
+
+    renderCollection();
   </script>
 </body>
 </html>
