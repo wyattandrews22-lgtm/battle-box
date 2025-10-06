@@ -39,17 +39,36 @@
   .rarity-legendary{border-color:#ffbf3f}
   .book-btn{position:fixed;right:16px;bottom:16px;width:56px;height:56px;border-radius:10px;background:linear-gradient(180deg,#22223a,#141426);border:3px solid rgba(255,180,80,.08);display:flex;align-items:center;justify-content:center;z-index:80;box-shadow:6px 6px 0 rgba(0,0,0,.6);cursor:pointer}
   .book-btn img{width:36px;height:36px;image-rendering:pixelated}
-  /* full-screen translucent overlay */
   .overlay{position:fixed;inset:0;background:rgba(8,8,16,0.84);display:flex;align-items:center;justify-content:center;z-index:100;padding:24px}
   .overlay .sheet{width:min(92vw,720px);height:min(86vh,720px);background:linear-gradient(180deg,#121227,#1a1a36);border-radius:12px;border:3px solid rgba(255,186,80,.06);padding:16px;box-sizing:border-box;overflow:auto}
   .overlay .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
   .overlay .close{background:transparent;border:2px solid rgba(255,255,255,.06);padding:8px;border-radius:8px;color:var(--gold);cursor:pointer}
+  .card-frame {
+    /* hand-drawn frame using inline SVG as background (looks sketchy) */
+    background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='260' viewBox='0 0 420 260'%3E%3Crect x='6' y='6' width='408' height='248' rx='12' fill='%23101120' stroke='%23b07a3a' stroke-width='4'/%3E%3Cpath d='M18 20 Q32 10 60 18' stroke='%23ffd58a' stroke-width='3' fill='none'/%3E%3Cpath d='M402 240 Q388 250 360 242' stroke='%23ffd58a' stroke-width='3' fill='none'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-size:cover;
+    padding:18px;
+    border-radius:10px;
+    box-sizing:border-box;
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+  .detail-icon { width:128px; height:128px; image-rendering:pixelated; border-radius:8px; background:#0b0b12; display:flex; align-items:center; justify-content:center; border:2px solid rgba(255,255,255,0.04) }
+  .detail-meta { color:#fff; display:flex; flex-direction:column; gap:8px; }
+  .detail-meta .name { font-size:14px; color:var(--gold); }
+  .detail-meta .rarity { font-size:11px; }
+  .card-actions { display:flex; gap:8px; margin-top:8px; }
+  .close-x { position:absolute; right:18px; top:14px; background:transparent; color:var(--gold); border:1px solid rgba(255,255,255,0.06); padding:6px; border-radius:6px; cursor:pointer; }
   .mobile-friendly{touch-action:manipulation}
   @media (max-width:800px){
     .app{flex-direction:column;align-items:center;padding:12px}
     .collection-panel{width:92vw}
     .left{width:92vw}
     .book-btn{right:10px;bottom:10px}
+    .card-frame{flex-direction:column; align-items:center}
+    .detail-icon{width:96px;height:96px}
   }
 </style>
 </head>
@@ -66,7 +85,7 @@
         <button id="openBtn">Open Chest (10g)</button>
         <button id="sellBtn">Sell Selected</button>
       </div>
-      <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">Click a weapon on the right, then press <strong>Sell Selected</strong></div>
+      <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">Click a weapon to view its card, then Select or Sell</div>
     </div>
 
     <div class="collection-panel" aria-label="Collection Book">
@@ -86,7 +105,6 @@
 
   <!-- book toggle -->
   <div id="bookBtn" class="book-btn" title="Open Collection (Full Screen)">
-    <!-- small book pixel SVG -->
     <img id="bookIcon" alt="book" src="">
   </div>
 
@@ -101,11 +119,28 @@
     </div>
   </div>
 
-<script>
-/* ===== Battle Box - single-file (pixel icons + webaudio) ===== */
+  <!-- detail card (hidden by default) -->
+  <div id="card" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; z-index:200;">
+    <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
+      <div class="card-frame" id="cardFrame" style="width:min(92vw,420px);max-width:420px;position:relative;">
+        <button class="close-x" id="cardClose">Close</button>
+        <div class="detail-icon" id="detailIcon"><img id="detailImg" src="" alt="" style="width:100%;height:100%;image-rendering:pixelated"></div>
+        <div class="detail-meta">
+          <div class="name" id="detailName">Weapon Name</div>
+          <div class="rarity" id="detailRarity">RARITY</div>
+          <div class="card-actions">
+            <button id="cardSelect">Select</button>
+            <button id="cardSell">Sell One</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
+<script>
+/* Battle Box with hand-drawn detail card (single file) */
 (function(){
-  // === Data ===
+  // Data definitions
   const weaponDefs = [
     { name:'Iron Sword',      type:'sword', rarity:'common' },
     { name:'Steel Sword',     type:'sword', rarity:'common' },
@@ -128,17 +163,17 @@
     { name:'Shadow Dagger',   type:'dagger',rarity:'rare' },
     { name:'Divine Hammer',   type:'hammer',rarity:'legendary' }
   ];
-
   const dropRates = { common:0.50, uncommon:0.30, rare:0.12, epic:0.06, legendary:0.02 };
   const sellValues = { common:5, uncommon:10, rare:20, epic:50, legendary:100 };
   const rarityOrder = { common:0, uncommon:1, rare:2, epic:3, legendary:4 };
   const rarityColor = { common:'#3a3a4a', uncommon:'#0ea36b', rare:'#1676ff', epic:'#a44bff', legendary:'#ffbf3f' };
 
-  // === State ===
+  // state
   let gold = 50;
   let collection = {}; // name -> {name, rarity, count, index}
-  let ownedList = []; // flattened owned entries for selection semantics
-  let selectedOwnedIndex = null; // index into ownedList
+  let ownedList = [];
+  let selectedOwnedIndex = null;
+
   // DOM refs
   const goldEl = document.getElementById('gold');
   const openBtn = document.getElementById('openBtn');
@@ -152,266 +187,99 @@
   const overlayGrid = document.getElementById('overlayGrid');
   const closeOverlay = document.getElementById('closeOverlay');
 
-  // === Pixel icon generator (SVG blocks to emulate pixel art) ===
-  function makeSvgDataURI(svgStr){
-    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svgStr);
-  }
+  const card = document.getElementById('card');
+  const cardClose = document.getElementById('cardClose');
+  const detailImg = document.getElementById('detailImg');
+  const detailName = document.getElementById('detailName');
+  const detailRarity = document.getElementById('detailRarity');
+  const cardSelect = document.getElementById('cardSelect');
+  const cardSell = document.getElementById('cardSell');
 
-  function pixelIcon(def){
-    // base palette by rarity color and black background
-    const bg = '#111118';
-    const accent = rarityColor[def.rarity] || '#666';
-    // We'll draw a tiny 6x6 "pixel" grid scaled up (8px per pixel in the viewbox)
-    // and compose simple shapes depending on type
-    // Build rectangles at certain grid coords to form rough icons
-    const p = (x,y) => `<rect x="${x*8}" y="${y*8}" width="8" height="8" />`;
-    let blocks = '';
-    // common base shape for weapon types
-    switch(def.type){
-      case 'sword':
-        blocks += p(2,0)+p(2,1)+p(2,2)+p(2,3)+p(2,4); // blade
-        blocks += p(1,4)+p(3,4); // guard
-        blocks += p(2,5); // pommel
-        break;
-      case 'bow':
-        blocks += p(0,1)+p(1,1)+p(2,1)+p(3,1)+p(4,1);
-        blocks += p(0,2)+p(4,2);
-        blocks += p(0,3)+p(4,3);
-        break;
-      case 'wand':
-        blocks += p(2,1)+p(2,2)+p(2,3)+p(2,4);
-        blocks += p(2,0);
-        break;
-      case 'staff':
-        blocks += p(2,1)+p(2,2)+p(2,3)+p(2,4)+p(2,5);
-        blocks += p(1,1)+p(3,1);
-        break;
-      case 'dagger':
-        blocks += p(2,1)+p(2,2)+p(2,3);
-        blocks += p(1,3)+p(3,3);
-        break;
-      case 'axe':
-        blocks += p(1,1)+p(2,1)+p(3,1);
-        blocks += p(1,2)+p(3,2);
-        blocks += p(2,3);
-        break;
-      case 'hammer':
-        blocks += p(1,1)+p(2,1)+p(3,1);
-        blocks += p(2,2);
-        blocks += p(2,3)+p(2,4);
-        break;
-      case 'spear':
-      case 'trident':
-        blocks += p(2,0)+p(2,1)+p(2,2)+p(2,3)+p(2,4);
-        blocks += p(1,1)+p(3,1);
-        break;
-      default:
-        blocks += p(2,2)+p(2,3)+p(1,3)+p(3,3);
-    }
-
-    // color mapping: blade/metal -> white-ish; accent overlay by rarity color
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'>
-      <rect width='48' height='48' fill='${bg}' rx='6'/>
-      <g fill='#ffffff' opacity='0.92'>${blocks}</g>
-      <g fill='${accent}' opacity='0.22'>${blocks}</g>
-    </svg>`;
-    return makeSvgDataURI(svg);
-  }
-
-  // book icon (small)
-  function bookIconURI(){
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'>
-      <rect width='48' height='48' rx='8' fill='#222232'/>
-      <rect x='8' y='10' width='28' height='28' rx='4' fill='#2f2f48' stroke='#ffbf3f' stroke-width='2'/>
-      <rect x='14' y='14' width='6' height='1.5' fill='#ffd786'/>
-      <rect x='14' y='18' width='10' height='1.5' fill='#ffd786'/>
-      <rect x='14' y='22' width='8' height='1.5' fill='#ffd786'/>
-    </svg>`;
-    return makeSvgDataURI(svg);
-  }
-
-  // chest SVG data URIs
-  function chestURI(open){
-    const body = '#6b3e1f', lid = open? '#ffdd9b' : '#c49a6c';
-    const lidTransform = open ? "translate(0,-12) rotate(-18 60 36)" : "";
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'>
-      <rect width='120' height='120' fill='none'/>
-      <rect x='14' y='44' width='92' height='52' rx='6' fill='${body}' stroke='#331a0b' stroke-width='4'/>
-      <g transform='${lidTransform}'>
-        <rect x='14' y='24' width='92' height='34' rx='6' fill='${lid}' stroke='#331a0b' stroke-width='4'/>
-      </g>
-      <rect x='52' y='68' width='16' height='16' rx='3' fill='#2a1b10' stroke='#0f0f0f' stroke-width='2'/>
-    </svg>`;
-    return makeSvgDataURI(svg);
-  }
-
-  // === Audio: small synth loop + fx with WebAudio ===
+  // audio setup (lightweight synth)
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   const audioCtx = new AudioCtx();
-  let musicGain;
+  let musicStarted = false;
 
   function startMusicLoop(){
+    if(musicStarted) return;
+    musicStarted = true;
     try {
-      // create a simple synth loop (low-weight) — light so page size small
-      musicGain = audioCtx.createGain();
-      musicGain.gain.value = 0.08; // low volume
-      musicGain.connect(audioCtx.destination);
-
-      // two oscillators with LFO amplitude envelope for looped arpeggio
-      const master = audioCtx.createGain();
-      master.gain.value = 0.0;
-      master.connect(musicGain);
-
-      // pattern: sequence of notes using scheduled oscillators
-      const notes = [220, 262, 196, 233]; // base frequencies
+      const notes = [220, 262, 196, 233];
       const now = audioCtx.currentTime;
-      const loopDuration = 2.4;
       for(let i=0;i<notes.length;i++){
-        const t = now + i * (loopDuration / notes.length);
+        const t = now + i*0.6;
         const o = audioCtx.createOscillator();
-        o.type = 'sawtooth';
-        o.frequency.setValueAtTime(notes[i], t);
-        const g = audioCtx.createGain();
-        g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(0.09, t+0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + (loopDuration/notes.length) * 0.98);
-        o.connect(g); g.connect(master);
-        o.start(t); o.stop(t + (loopDuration/notes.length));
+        o.type='sawtooth'; o.frequency.setValueAtTime(notes[i], t);
+        const g = audioCtx.createGain(); g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.06,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001, t+0.55);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(t); o.stop(t+0.58);
       }
-      // schedule repeating using periodic scheduler
-      // We'll create a repeating timeline by using setInterval to schedule next group
-      // Simpler: create a repeating oscillator chord with LFO
-      // Add subtle ambient oscillator
-      const ambient = audioCtx.createOscillator();
-      ambient.type = 'triangle';
-      ambient.frequency.value = 40;
-      const ambientGain = audioCtx.createGain();
-      ambientGain.gain.value = 0.02;
-      ambient.connect(ambientGain); ambientGain.connect(musicGain);
-      ambient.start();
+      // small ambient
+      const ambient = audioCtx.createOscillator(); ambient.type='triangle'; ambient.frequency.value=40;
+      const ag = audioCtx.createGain(); ag.gain.value=0.01; ambient.connect(ag); ag.connect(audioCtx.destination); ambient.start();
+    } catch(e){ /* ignore */ }
+  }
 
-      // To keep CPU low, create one repeating pattern via ScriptProcessor-like scheduling
-      // We'll also set a small gain that we can fade in
-      musicGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
-      musicGain.gain.linearRampToValueAtTime(1.0, audioCtx.currentTime + 0.5);
-    } catch(e){
-      // audio context may be suspended until user interacts
-      console.warn('Audio start failed:', e);
+  function playChestSound(){ try { const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='square'; o.frequency.setValueAtTime(520,audioCtx.currentTime); g.gain.setValueAtTime(0, audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.14, audioCtx.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.32); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.34);}catch(e){} }
+  function playCoinSound(){ try { const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='triangle'; o.frequency.setValueAtTime(960,audioCtx.currentTime); g.gain.setValueAtTime(0, audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.16,audioCtx.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.18); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.22);}catch(e){} }
+  function playBookSound(){ try{ const o1=audioCtx.createOscillator(), o2=audioCtx.createOscillator(), g=audioCtx.createGain(); o1.type='square'; o2.type='sine'; o1.frequency.setValueAtTime(440,audioCtx.currentTime); o2.frequency.setValueAtTime(330,audioCtx.currentTime); g.gain.setValueAtTime(0, audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.08,audioCtx.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.16); o1.connect(g); o2.connect(g); g.connect(audioCtx.destination); o1.start(); o2.start(); o1.stop(audioCtx.currentTime+0.16); o2.stop(audioCtx.currentTime+0.16);}catch(e){} }
+
+  // pixel icon generator (simple block icons)
+  function makeSvgDataURI(svg){ return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg); }
+  function pixelIcon(def){
+    const bg='#0b0b12'; const accent = rarityColor[def.rarity] || '#666';
+    function p(x,y){ return `<rect x="${x*8}" y="${y*8}" width="8" height="8"/>`; }
+    let blocks = '';
+    switch(def.type){
+      case 'sword': blocks += p(2,0)+p(2,1)+p(2,2)+p(2,3)+p(2,4)+p(1,4)+p(3,4)+p(2,5); break;
+      case 'bow': blocks += p(0,1)+p(1,1)+p(2,1)+p(3,1)+p(4,1)+p(0,2)+p(4,2)+p(0,3)+p(4,3); break;
+      case 'wand': blocks += p(2,1)+p(2,2)+p(2,3)+p(2,4)+p(2,0); break;
+      case 'staff': blocks += p(2,1)+p(2,2)+p(2,3)+p(2,4)+p(2,5)+p(1,1)+p(3,1); break;
+      case 'dagger': blocks += p(2,1)+p(2,2)+p(2,3)+p(1,3)+p(3,3); break;
+      case 'axe': blocks += p(1,1)+p(2,1)+p(3,1)+p(1,2)+p(3,2)+p(2,3); break;
+      case 'hammer': blocks += p(1,1)+p(2,1)+p(3,1)+p(2,2)+p(2,3)+p(2,4); break;
+      case 'spear': blocks += p(2,0)+p(2,1)+p(2,2)+p(2,3)+p(2,4)+p(1,1)+p(3,1); break;
+      default: blocks += p(2,2)+p(2,3)+p(1,3)+p(3,3);
     }
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><rect width='48' height='48' fill='${bg}' rx='6'/><g fill='#fff' opacity='0.92'>${blocks}</g><g fill='${accent}' opacity='0.22'>${blocks}</g></svg>`;
+    return makeSvgDataURI(svg);
   }
 
-  function playChestSound(){
-    try{
-      const o = audioCtx.createOscillator();
-      o.type = 'square';
-      const g = audioCtx.createGain();
-      g.gain.value = 0.0;
-      o.frequency.setValueAtTime(520, audioCtx.currentTime);
-      g.gain.setValueAtTime(0, audioCtx.currentTime);
-      g.gain.linearRampToValueAtTime(0.16, audioCtx.currentTime + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.28);
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start(); o.stop(audioCtx.currentTime + 0.32);
-    }catch(e){}
+  // simple chest svg
+  function chestURI(open){
+    const body='#6b3e1f', lid = open? '#ffdd9b':'#c49a6c';
+    const lidTransform = open ? "translate(0,-12) rotate(-18 60 36)" : "";
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><rect width='120' height='120' fill='none'/><rect x='14' y='44' width='92' height='52' rx='6' fill='${body}' stroke='#331a0b' stroke-width='4'/><g transform='${lidTransform}'><rect x='14' y='24' width='92' height='34' rx='6' fill='${lid}' stroke='#331a0b' stroke-width='4'/></g><rect x='52' y='68' width='16' height='16' rx='3' fill='#2a1b10' stroke='#0f0f0f' stroke-width='2'/></svg>`;
+    return makeSvgDataURI(svg);
   }
 
-  function playCoinSound(){
-    try{
-      const now = audioCtx.currentTime;
-      const o = audioCtx.createOscillator();
-      o.type='triangle'; o.frequency.setValueAtTime(880, now);
-      const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0, now);
-      g.gain.linearRampToValueAtTime(0.14, now + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
-      o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(now + 0.26);
-    }catch(e){}
-  }
+  // persistence
+  function saveState(){ try{ localStorage.setItem('bb_gold',String(gold)); localStorage.setItem('bb_coll',JSON.stringify(collection)); }catch(e){} }
+  function loadState(){ try{ const g = localStorage.getItem('bb_gold'); if(g!==null) gold=Number(g); const c = localStorage.getItem('bb_coll'); if(c) collection=JSON.parse(c); }catch(e){} }
 
-  function playBookSound(){
-    try{
-      const now = audioCtx.currentTime;
-      const o1 = audioCtx.createOscillator(), o2 = audioCtx.createOscillator();
-      o1.type='square'; o2.type='sine';
-      o1.frequency.setValueAtTime(440, now); o2.frequency.setValueAtTime(330, now);
-      const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0, now);
-      g.gain.linearRampToValueAtTime(0.08, now+0.01); g.gain.exponentialRampToValueAtTime(0.0001, now+0.18);
-      o1.connect(g); o2.connect(g); g.connect(audioCtx.destination);
-      o1.start(); o2.start(); o1.stop(now+0.18); o2.stop(now+0.18);
-    }catch(e){}
-  }
+  // helpers
+  function rebuildOwnedList(){ ownedList=[]; Object.keys(collection).forEach(name=>{ const ent=collection[name]; for(let i=0;i<ent.count;i++) ownedList.push({name:ent.name,rarity:ent.rarity,index:ent.index}); }); }
+  function addToCollection(def){ const name=def.name; if(collection[name]) collection[name].count+=1; else collection[name]={name,rarity:def.rarity,count:1,index:def.index}; rebuildOwnedList(); saveState(); }
+  function removeOneAt(index){ const ent=ownedList[index]; if(!ent) return null; const name=ent.name; if(!collection[name]) return null; collection[name].count-=1; if(collection[name].count<=0) delete collection[name]; rebuildOwnedList(); saveState(); return ent; }
 
-  // === Persistence ===
-  function saveState(){ try{ localStorage.setItem('bb_gold',String(gold)); localStorage.setItem('bb_collection',JSON.stringify(collection)); }catch(e){} }
-  function loadState(){ try{ const g=localStorage.getItem('bb_gold'); if(g!==null) gold=Number(g); const col=localStorage.getItem('bb_collection'); if(col) collection=JSON.parse(col); }catch(e){} }
-
-  // === collection helpers ===
-  function rebuildOwnedList(){
-    ownedList = [];
-    Object.keys(collection).forEach(name => {
-      const ent = collection[name];
-      for(let i=0;i<ent.count;i++){
-        ownedList.push({ name: ent.name, rarity: ent.rarity, index: ent.index });
-      }
-    });
-  }
-
-  function addToCollection(entry){
-    const name = entry.name;
-    if(collection[name]) collection[name].count += 1;
-    else collection[name] = { name, rarity: entry.rarity, count: 1, index: entry.index };
-    rebuildOwnedList();
-    saveState();
-  }
-
-  function removeOneOwnedAt(index){
-    const ent = ownedList[index];
-    if(!ent) return null;
-    const name = ent.name;
-    if(!collection[name]) return null;
-    collection[name].count -= 1;
-    if(collection[name].count <= 0) delete collection[name];
-    rebuildOwnedList();
-    saveState();
-    return ent;
-  }
-
-  // === UI render ===
+  // UI rendering
   function renderChest(open=false){ chestEl.style.backgroundImage = `url("${chestURI(open)}")`; chestEl.classList.toggle('open', open); }
   function flashGlow(){ glowEl.classList.add('show'); setTimeout(()=>glowEl.classList.remove('show'),700); }
-
-  // produce weapon icon src
-  function weaponIconSrcByIndex(i){ return pixelIcon(weaponDefs[i]); }
-
-  // grid sorted by rarity (common->legendary), then name
-  function sortedDefs(){
-    return weaponDefs.slice().sort((a,b)=>{
-      const ra = rarityOrder[a.rarity], rb = rarityOrder[b.rarity];
-      if(ra !== rb) return ra - rb;
-      return a.name.localeCompare(b.name);
-    });
-  }
+  function weaponIconSrc(index){ return pixelIcon(weaponDefs[index]); }
+  function sortedDefs(){ return weaponDefs.slice().sort((a,b)=>{ const ra=rarityOrder[a.rarity], rb=rarityOrder[b.rarity]; if(ra!==rb) return ra-rb; return a.name.localeCompare(b.name); }); }
 
   function renderGrid(){
-    gridEl.innerHTML = '';
-    const defs = sortedDefs();
-    defs.forEach(def => {
+    gridEl.innerHTML=''; const defs = sortedDefs();
+    defs.forEach(def=>{
       const idx = weaponDefs.findIndex(w=>w.name===def.name);
       const cell = document.createElement('div'); cell.className='cell rarity-'+def.rarity;
-      // icon
-      const img = document.createElement('img'); img.className='icon'; img.src = weaponIconSrcByIndex(idx); img.alt = def.name;
+      const img = document.createElement('img'); img.className='icon'; img.src=weaponIconSrc(idx); img.alt=def.name;
       cell.appendChild(img);
-      // count overlay
-      const ent = collection[def.name];
-      const count = ent ? ent.count : 0;
-      if(count>0){ const b = document.createElement('div'); b.className='count'; b.textContent = count; cell.appendChild(b); }
-      // click behavior: toggle selection to first owned instance of this name, or clear if none
-      cell.onclick = () => {
-        const firstOwnedIdx = ownedList.findIndex(o => o.name === def.name);
-        if(firstOwnedIdx === -1) { selectedOwnedIndex = null; }
-        else { selectedOwnedIndex = firstOwnedIdx; }
-        updateSelectionVisual();
-      };
-      // highlight if selected corresponds to this weapon
+      const entry = collection[def.name]; const count = entry?entry.count:0;
+      if(count>0){ const b=document.createElement('div'); b.className='count'; b.textContent=count; cell.appendChild(b); }
+      cell.onclick = ()=> { openCard(def); };
+      // highlight if selectedOwnedIndex refers to this weapon
       if(selectedOwnedIndex !== null){
         const sel = ownedList[selectedOwnedIndex];
         if(sel && sel.name === def.name) cell.classList.add('selected');
@@ -421,161 +289,121 @@
   }
 
   function renderOverlayGrid(){
-    overlayGrid.innerHTML = '';
+    overlayGrid.innerHTML='';
     const defs = sortedDefs();
-    defs.forEach(def => {
+    defs.forEach(def=>{
       const idx = weaponDefs.findIndex(w=>w.name===def.name);
-      const cell = document.createElement('div'); cell.style.padding='8px'; cell.style.background='rgba(0,0,0,0.06)'; cell.style.borderRadius='8px';
-      cell.style.display='flex'; cell.style.flexDirection='column'; cell.style.alignItems='center'; cell.style.justifyContent='center';
-      const img = document.createElement('img'); img.src = weaponIconSrcByIndex(idx); img.style.width='48px'; img.style.height='48px'; img.style.imageRendering='pixelated';
-      const label = document.createElement('div'); label.textContent = def.name; label.style.fontSize='10px'; label.style.marginTop='6px';
-      label.style.color = '#fff';
-      const ent = collection[def.name]; const count = ent?ent.count:0;
-      const cnt = document.createElement('div'); cnt.textContent = count?('Owned: '+count):'Locked'; cnt.style.fontSize='10px'; cnt.style.color = ent? '#ffd' : '#666';
+      const cell = document.createElement('div'); cell.style.padding='8px'; cell.style.background='rgba(0,0,0,0.06)'; cell.style.borderRadius='8px'; cell.style.display='flex'; cell.style.flexDirection='column'; cell.style.alignItems='center';
+      const img = document.createElement('img'); img.src = weaponIconSrc(idx); img.style.width='48px'; img.style.height='48px'; img.style.imageRendering='pixelated';
+      const label = document.createElement('div'); label.textContent=def.name; label.style.fontSize='10px'; label.style.marginTop='6px'; label.style.color='#fff';
+      const ent = collection[def.name]; const cnt = document.createElement('div'); cnt.textContent = ent?('Owned: '+ent.count):'Locked'; cnt.style.fontSize='10px'; cnt.style.color = ent? '#ffd' : '#666';
       cell.appendChild(img); cell.appendChild(label); cell.appendChild(cnt);
       overlayGrid.appendChild(cell);
     });
   }
 
+  // card logic (instant show)
+  function openCard(def){
+    // show card with info
+    const idx = weaponDefs.findIndex(w=>w.name===def.name);
+    detailImg.src = weaponIconSrc(idx);
+    detailName.textContent = def.name;
+    detailRarity.textContent = def.rarity.toUpperCase();
+    detailRarity.style.color = rarityColor[def.rarity] || '#fff';
+    // set handlers for Select and Sell in card (closure)
+    cardSelect.onclick = ()=> {
+      // select first owned instance of this name
+      const firstIdx = ownedList.findIndex(o=>o.name===def.name);
+      if(firstIdx === -1) { alert('You do not own this weapon yet'); return; }
+      selectedOwnedIndex = firstIdx;
+      updateSelectionVisual();
+      card.style.display='none';
+    };
+    cardSell.onclick = ()=> {
+      const firstIdx = ownedList.findIndex(o=>o.name===def.name);
+      if(firstIdx === -1){ alert('No copies to sell'); return; }
+      const removed = removeOneAt(firstIdx);
+      if(removed){ gold += sellValues[removed.rarity] || 0; playCoinSound(); saveState(); rebuildOwnedList(); selectedOwnedIndex = null; renderGrid(); renderOverlayGrid(); updateGold(); card.style.display='none'; quickToast(`Sold ${removed.name}`); }
+    };
+    // show card instantly
+    card.style.display='flex';
+  }
+
+  function closeCard(){ card.style.display='none'; }
+
   function updateSelectionVisual(){
-    // mark selected cell in main grid by name
     const cells = Array.from(gridEl.children);
-    cells.forEach((cell, idx) => {
-      cell.classList.remove('selected');
-      const def = sortedDefs()[idx];
+    cells.forEach((c,i)=>{
+      c.classList.remove('selected');
+      const def = sortedDefs()[i];
       if(selectedOwnedIndex !== null){
         const sel = ownedList[selectedOwnedIndex];
-        if(sel && sel.name === def.name) cell.classList.add('selected');
+        if(sel && sel.name === def.name) c.classList.add('selected');
       }
     });
-    // also update overlay selection counts if visible
   }
 
-  // === random / drop logic ===
-  function pickRarity(){
-    const r = Math.random();
-    let cum = 0;
-    for(const key of ['common','uncommon','rare','epic','legendary']){
-      cum += dropRates[key];
-      if(r < cum) return key;
-    }
-    return 'common';
+  function quickToast(text){
+    const t = document.createElement('div'); t.textContent=text; t.style.position='absolute'; t.style.bottom='8px'; t.style.left='50%'; t.style.transform='translateX(-50%)'; t.style.padding='8px 10px'; t.style.background='rgba(0,0,0,0.6)'; t.style.borderRadius='8px'; t.style.fontSize='11px'; t.style.border='1px solid rgba(255,255,255,0.04)'; chestEl.parentElement.appendChild(t);
+    setTimeout(()=> t.remove(),1300);
   }
 
-  function pickWeaponByRarity(r){
-    const pool = weaponDefs.map((d,i)=>({...d,index:i})).filter(d=>d.rarity===r);
-    if(pool.length===0) return null;
-    return pool[Math.floor(Math.random()*pool.length)];
-  }
+  // pickups & randoms
+  function pickRarity(){ const r=Math.random(); let cum=0; for(const k of ['common','uncommon','rare','epic','legendary']){ cum+=dropRates[k]; if(r < cum) return k; } return 'common'; }
+  function pickWeaponByRarity(r){ const pool = weaponDefs.map((d,i)=>({...d,index:i})).filter(d=>d.rarity===r); if(pool.length===0) return null; return pool[Math.floor(Math.random()*pool.length)]; }
 
-  // === actions ===
+  // actions
   function openChestAction(){
-    if(gold < 10){ alert('Not enough gold!'); return; }
-    gold -= 10; updateGoldUI(); saveState();
-    // animate chest & play sound
+    if(gold < 10){ alert('Not enough gold'); return; }
+    gold -= 10; updateGold(); saveState();
     renderChest(true); flashGlow(); playChestSound();
-    chestEl.classList.add('open');
     const rarity = pickRarity();
     const pick = pickWeaponByRarity(rarity) || weaponDefs[Math.floor(Math.random()*weaponDefs.length)];
     setTimeout(()=> {
-      addToCollection({ name: pick.name, rarity: pick.rarity, index: pick.index });
-      chestEl.classList.remove('open');
-      renderChest(false);
-      rebuildOwnedList();
-      renderGrid(); renderOverlayGrid();
-      quickToast(`${pick.name} (${pick.rarity.toUpperCase()})`);
-    }, 700);
+      addToCollection(pick); rebuildOwnedList(); renderGrid(); renderOverlayGrid(); renderChest(false); quickToast(`${pick.name} (${pick.rarity.toUpperCase()})`);
+    },700);
   }
 
   function sellSelectedAction(){
-    if(selectedOwnedIndex === null){ alert('Select a weapon first by clicking it in the grid'); return; }
-    const entry = ownedList[selectedOwnedIndex];
-    if(!entry){ alert('Invalid selection'); return; }
-    const val = sellValues[entry.rarity] || 0;
-    const removed = removeOneOwnedAt(selectedOwnedIndex);
-    if(removed){ gold += val; playCoinSound(); saveState(); rebuildOwnedList(); selectedOwnedIndex = null; renderGrid(); renderOverlayGrid(); updateGoldUI(); quickToast(`Sold ${removed.name} for ${val}g`); }
+    if(selectedOwnedIndex === null){ alert('Select a weapon first (via card Select)'); return; }
+    const ent = ownedList[selectedOwnedIndex];
+    if(!ent){ alert('Invalid selection'); return; }
+    const val = sellValues[ent.rarity] || 0;
+    const removed = removeOneAt(selectedOwnedIndex);
+    if(removed){ gold += val; playCoinSound(); saveState(); rebuildOwnedList(); selectedOwnedIndex = null; renderGrid(); renderOverlayGrid(); updateGold(); quickToast(`Sold ${removed.name} for ${val}g`); }
   }
 
-  // === small UI helpers ===
-  function updateGoldUI(){ goldEl.textContent = gold; }
-  function quickToast(text){
-    const t = document.createElement('div');
-    t.textContent = text; t.style.position='absolute'; t.style.bottom='6px'; t.style.left='50%'; t.style.transform='translateX(-50%)';
-    t.style.padding='8px 12px'; t.style.background='rgba(0,0,0,0.6)'; t.style.borderRadius='8px'; t.style.fontSize='11px';
-    t.style.border='1px solid rgba(255,255,255,0.04)'; chestEl.parentElement.appendChild(t);
-    setTimeout(()=> t.remove(), 1400);
-  }
+  function updateGold(){ goldEl.textContent = gold; }
 
-  // === init & wiring ===
+  // initialize
   function init(){
-    loadState();
-    // precompute index on defs
     weaponDefs.forEach((d,i)=> d.index = i);
+    loadState();
     rebuildOwnedList();
-    updateGoldUI();
+    updateGold();
     renderChest(false);
     renderGrid();
     renderOverlayGrid();
-    // set book icon
-    bookIcon.src = bookIconURI();
-
-    // audio start - try autoplay; browsers may block until user interaction
-    try {
-      // resume if suspended
-      if(audioCtx.state === 'suspended') audioCtx.resume();
-      startMusicLoop();
-    } catch(e){ console.warn('Audio init failed', e); }
-
-    // wire buttons
-    openBtn.addEventListener('click', ()=>{ // ensure audio resume on user interaction
-      if(audioCtx.state === 'suspended') audioCtx.resume().then(()=> startMusicLoop()).catch(()=>{});
-      openChestAction();
-    });
-    sellBtn.addEventListener('click', ()=>{ if(audioCtx.state === 'suspended') audioCtx.resume(); sellSelectedAction(); });
-
-    // book toggle
-    bookBtn.addEventListener('click', ()=>{
-      // resume audio if needed
-      if(audioCtx.state === 'suspended') audioCtx.resume().then(()=> startMusicLoop()).catch(()=>{});
-      overlay.style.display = 'flex';
-      playBookSound();
-      playChestSound(); // playful
-    });
+    bookIcon.src = (function(){ const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><rect width='48' height='48' rx='8' fill='#222232'/><rect x='8' y='10' width='28' height='28' rx='4' fill='#2f2f48' stroke='#ffbf3f' stroke-width='2'/><rect x='14' y='14' width='6' height='1.5' fill='#ffd786'/><rect x='14' y='18' width='10' height='1.5' fill='#ffd786'/><rect x='14' y='22' width='8' height='1.5' fill='#ffd786'/></svg>`; return 'data:image/svg+xml;utf8,'+encodeURIComponent(svg); })();
+    // audio attempt resume
+    try{ if(audioCtx.state === 'suspended') audioCtx.resume().then(()=>startMusicLoop()).catch(()=>{}); else startMusicLoop(); }catch(e){}
+    // wire events
+    openBtn.addEventListener('click', ()=>{ if(audioCtx.state === 'suspended') audioCtx.resume().then(()=>startMusicLoop()).catch(()=>{}); openChestAction(); });
+    sellBtn.addEventListener('click', ()=>{ if(audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{}); sellSelectedAction(); });
+    bookBtn.addEventListener('click', ()=>{ overlay.style.display='flex'; playBookSound(); });
     closeOverlay.addEventListener('click', ()=>{ overlay.style.display='none'; playBookSound(); });
-
-    // keyboard support for mobile: ESC to close overlay
-    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ overlay.style.display='none'; } });
-
-    // allow tapping overlay background to close
+    // overlay background click
     overlay.addEventListener('click', (e)=>{ if(e.target === overlay) overlay.style.display='none'; });
-
-    // long-press on chest for inspect? (mobile nicety) - optional left as is
-
-    // load any visual assets (chest closed)
-    renderChest(false);
+    // card close
+    cardClose.addEventListener('click', ()=>{ closeCard(); });
+    // overlay grid quick close on click
+    overlayGrid.addEventListener('click', ()=>{ overlay.style.display='none'; });
   }
 
-  // nice helper: try to autoplay on load; some browsers disallow until gesture
-  window.addEventListener('load', ()=>{
-    // attempt to resume context & start music
-    if(audioCtx.state === 'suspended'){
-      audioCtx.resume().then(()=> startMusicLoop()).catch(()=>{ /* no autoplay */ });
-    } else {
-      startMusicLoop();
-    }
-  });
-
-  // set overlay grid click to close on selection (optional)
-  overlayGrid.addEventListener('click', ()=>{ overlay.style.display='none'; });
-
-  // exports for actions
-  openBtn.addEventListener && openBtn.addEventListener('click', ()=>{});
-  sellBtn.addEventListener && sellBtn.addEventListener('click', ()=>{});
-
-  // start
-  init();
+  window.addEventListener('load', ()=>{ init(); });
 
 })();
 </script>
 </body>
 </html>
+
