@@ -1,176 +1,603 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>⚔️ Battle Box ⚔️</title>
   <style>
-    body {
-      background-color: #101020;
-      color: #fff;
-      font-family: 'Press Start 2P', monospace;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    :root{
+      --bg:#0f1020;
+      --panel:#181830;
+      --accent:#ffb347;
+      --gold:#ffd166;
+      --muted:#9aa0b0;
+      --cell-size:64px;
     }
-    .game {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 40px;
+
+    html,body{
+      height:100%;
+      margin:0;
+      background:var(--bg);
+      color:#fff;
+      font-family: "Press Start 2P", monospace;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
     }
+
+    .app {
+      display:flex;
+      gap:32px;
+      align-items:flex-start;
+      justify-content:center;
+      padding:32px;
+      box-sizing:border-box;
+    }
+
+    /* Left column: title, chest, controls */
     .left {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      align-items:center;
+      width:260px;
     }
+
+    h1 { color:var(--accent); margin:4px 0 12px; font-size:20px; text-align:center; }
+
+    .chest-wrap {
+      position:relative;
+      width:160px;
+      height:160px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(180deg,#202038,#141425);
+      border:3px solid #29293e;
+      border-radius:12px;
+      box-shadow: 6px 6px 0 rgba(0,0,0,0.6);
+      overflow:visible;
+    }
+
     .chest {
-      width: 120px;
-      height: 120px;
-      background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAACXBIWXMAAAsTAAALEwEAmpwYAAAETklEQVR4nO3bzW0TQRSA4feYEiD5lLAAihkYiU0SCGsRTAqHgEUkPMS6Q0sFDLIzCT5AWwsKzPYtv5cY++Xuz9cefnN7dp7B37jjdbnQAAAAAAAAAAAAAAAAAAAAAAAIAv7z5Dg8M41s+qFj89cXtzvqG8kzCfxdXgL4n8ZrCd1Nv3Okv5koH8b7O0TPmcXxvNNgC1Q7mZ8yW2z4mnGWSeXwn2b4W5s8Yd7fs4d5fjHOfG0ObXnNnh4pYSmfHysZ7LxzAoeY7id3O+U69PzJWlYmdNnHK2nujfRfL8Z9s4fy6/KHqHcHeM2D2gV4V+4q9xPz7pVjSLOZ1x9H2Xs1NcfO1yZxZ/3Zdfyt6wf1ztHnvuhmNR7N/btcYw8Z7vHHcRuvNubHOM7/3nGMRvW+38AAAAAAAAAAAAAAAAAAAAAAAAAAADwcf4DRZ+jH6FStZMAAAAASUVORK5CYII=') no-repeat center/contain;
-      margin-bottom: 10px;
+      width:120px;
+      height:120px;
+      background-size:contain;
+      background-repeat:no-repeat;
+      transition: transform 0.12s linear;
+      will-change: transform;
+      filter: drop-shadow(0 6px 6px rgba(0,0,0,0.6));
     }
+
+    .chest.open {
+      transform: translateY(-6px) scale(1.02);
+    }
+
+    .glow {
+      position:absolute;
+      width:140px;
+      height:140px;
+      border-radius:8px;
+      box-shadow: 0 0 28px 6px rgba(255,186,80,0.24);
+      pointer-events:none;
+      opacity:0;
+      transition: opacity .18s ease;
+    }
+    .glow.show { opacity:1; }
+
+    .goldbox {
+      background:linear-gradient(180deg,#332b18,#1f1a12);
+      padding:8px 12px;
+      border-radius:8px;
+      border:2px solid rgba(255,180,80,0.18);
+      color:var(--gold);
+      font-size:12px;
+      width:100%;
+      text-align:center;
+      box-shadow: inset 0 -6px 12px rgba(0,0,0,0.2);
+    }
+
+    .controls { display:flex; gap:12px; margin-top:8px; }
     button {
-      background: #d47c1b;
-      border: 2px solid #ffb347;
-      padding: 10px 20px;
-      color: white;
-      font-family: 'Press Start 2P', monospace;
-      cursor: pointer;
-      box-shadow: 3px 3px #000;
-      transition: transform 0.1s;
+      background:linear-gradient(180deg,#d47c1b,#b85f0a);
+      border:2px solid rgba(255,180,80,0.2);
+      padding:8px 10px;
+      color:white;
+      cursor:pointer;
+      font-family: inherit;
+      font-size:11px;
+      border-radius:8px;
+      box-shadow: 3px 3px 0 rgba(0,0,0,0.6);
     }
-    button:active {
-      transform: translateY(2px);
+    button:active { transform: translateY(2px); }
+    button[disabled] { opacity:0.45; cursor:not-allowed; transform:none; }
+
+    /* Right column: collection */
+    .collection-panel {
+      width:420px;
+      background:var(--panel);
+      border-radius:12px;
+      border:3px solid rgba(255,180,80,0.06);
+      padding:14px;
+      box-shadow: 6px 6px 0 rgba(0,0,0,0.6);
     }
-    .collection {
-      border: 2px solid #ffb347;
-      padding: 20px;
-      display: grid;
-      grid-template-columns: repeat(5, 60px);
-      gap: 10px;
-      background-color: #181830;
+    .collection-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .collection-title { color:var(--accent); font-size:12px; }
+    .collection-sub { color:var(--muted); font-size:9px; }
+
+    .grid {
+      display:grid;
+      grid-template-columns: repeat(5, var(--cell-size));
+      grid-auto-rows: var(--cell-size);
+      gap:10px;
+      justify-content:center;
     }
-    .weapon {
-      width: 60px;
-      height: 60px;
-      border: 2px solid #333;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-color: #222;
-      cursor: pointer;
+
+    .cell {
+      width:var(--cell-size);
+      height:var(--cell-size);
+      background:#0f1220;
+      border:2px solid #26273a;
+      border-radius:8px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      cursor:pointer;
+      overflow:hidden;
     }
-    .weapon.selected {
-      border: 2px solid #ffb347;
+
+    .cell .count {
+      position:absolute;
+      bottom:4px;
+      right:6px;
+      font-size:10px;
+      color:#fff;
+      background:rgba(0,0,0,0.25);
+      padding:2px 4px;
+      border-radius:6px;
+      border:1px solid rgba(255,255,255,0.06);
     }
-    .rarity-common { filter: brightness(0.8); }
-    .rarity-uncommon { border-color: green; }
-    .rarity-rare { border-color: blue; }
-    .rarity-epic { border-color: purple; }
-    .rarity-legendary { border-color: gold; }
-    h1 {
-      text-align: center;
-      color: #ffb347;
+
+    .cell.selected {
+      outline:3px solid rgba(255,179,71,0.9);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px rgba(255,149,35,0.08);
     }
+
+    .cell .icon {
+      width:48px;
+      height:48px;
+      image-rendering: pixelated;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+    }
+
+    /* rarity borders (additional accent) */
+    .rarity-common { border-color: #3a3a4a; }
+    .rarity-uncommon { border-color: #0ea36b; box-shadow: inset 0 0 12px rgba(14,163,107,0.04); }
+    .rarity-rare { border-color: #1676ff; box-shadow: inset 0 0 12px rgba(22,118,255,0.05); }
+    .rarity-epic { border-color: #a44bff; box-shadow: inset 0 0 12px rgba(164,75,255,0.06); }
+    .rarity-legendary { border-color: #ffbf3f; box-shadow: inset 0 0 12px rgba(255,191,63,0.08); }
+
+    .footer-note { color:var(--muted); font-size:10px; margin-top:8px; text-align:center; }
   </style>
 </head>
 <body>
-  <div class="game">
+  <div class="app">
     <div class="left">
       <h1>⚔️ Battle Box ⚔️</h1>
-      <div class="chest"></div>
-      <p>Gold: <span id="gold">50</span></p>
-      <button id="openChest">Open Chest (10g)</button>
-      <button id="sellButton">Sell Selected</button>
+
+      <div class="chest-wrap">
+        <div id="glow" class="glow"></div>
+        <div id="chest" class="chest"></div>
+      </div>
+
+      <div class="goldbox">💰 <span id="gold">50</span> gold</div>
+
+      <div class="controls">
+        <button id="openBtn">Open Chest (10g)</button>
+        <button id="sellBtn">Sell Selected</button>
+      </div>
+      <div class="footer-note">Click a weapon on the right, then press <strong>Sell Selected</strong></div>
     </div>
 
-    <div>
-      <h2>Collection Book</h2>
-      <div id="collection" class="collection"></div>
+    <div class="collection-panel" aria-label="Collection Book">
+      <div class="collection-header">
+        <div>
+          <div class="collection-title">Collection Book</div>
+          <div class="collection-sub">Collect all 20 weapons</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="color:var(--muted); font-size:10px;">Chest cost</div>
+          <div style="color:var(--gold); font-size:12px;">10 gold</div>
+        </div>
+      </div>
+
+      <div id="grid" class="grid" role="list"></div>
     </div>
   </div>
 
-  <script>
-    const weapons = [
-      'Iron Sword','Steel Sword','Wooden Bow','Crossbow','Magic Wand','Fire Staff','Dagger','Axe','Hammer','Longsword',
-      'Greatsword','Katana','Trident','Spear','Crystal Sword','Dark Blade','Golden Axe','Lightning Bow','Shadow Dagger','Divine Hammer'
-    ];
-    const rarities = ['common','uncommon','rare','epic','legendary'];
-    const dropRates = {
-      common: 0.5,
-      uncommon: 0.3,
-      rare: 0.15,
-      epic: 0.045,
-      legendary: 0.005
-    };
-    const sellValues = {
-      common: 5,
-      uncommon: 10,
-      rare: 20,
-      epic: 50,
-      legendary: 100
-    };
+<script>
+(function(){
 
-    let gold = 50;
-    let collection = [];
-    let selectedIndex = null;
+  /***** Game data *****/
+  const weaponDefs = [
+    { name:'Iron Sword',      type:'sword', rarity:'common' },
+    { name:'Steel Sword',     type:'sword', rarity:'common' },
+    { name:'Wooden Bow',      type:'bow',   rarity:'common' },
+    { name:'Crossbow',        type:'bow',   rarity:'uncommon' },
+    { name:'Magic Wand',      type:'wand',  rarity:'rare' },
+    { name:'Fire Staff',      type:'staff', rarity:'epic' },
+    { name:'Dagger',          type:'dagger',rarity:'common' },
+    { name:'Axe',             type:'axe',   rarity:'uncommon' },
+    { name:'Hammer',          type:'hammer',rarity:'rare' },
+    { name:'Longsword',       type:'sword', rarity:'uncommon' },
+    { name:'Greatsword',      type:'sword', rarity:'epic' },
+    { name:'Katana',          type:'sword', rarity:'rare' },
+    { name:'Trident',         type:'spear', rarity:'epic' },
+    { name:'Spear',           type:'spear', rarity:'uncommon' },
+    { name:'Crystal Sword',   type:'sword', rarity:'legendary' },
+    { name:'Dark Blade',      type:'sword', rarity:'legendary' },
+    { name:'Golden Axe',      type:'axe',   rarity:'epic' },
+    { name:'Lightning Bow',   type:'bow',   rarity:'legendary' },
+    { name:'Shadow Dagger',   type:'dagger',rarity:'rare' },
+    { name:'Divine Hammer',   type:'hammer',rarity:'legendary' }
+  ];
 
-    const goldEl = document.getElementById('gold');
-    const collectionEl = document.getElementById('collection');
+  // dropRates — must sum to ~1; legendary very rare
+  const dropRates = {
+    common: 0.50,
+    uncommon: 0.30,
+    rare: 0.12,
+    epic: 0.06,
+    legendary: 0.02
+  };
 
-    function updateGold() { goldEl.textContent = gold; }
+  const sellValues = {
+    common: 5,
+    uncommon: 10,
+    rare: 20,
+    epic: 50,
+    legendary: 100
+  };
 
-    function getRarity() {
-      const r = Math.random();
-      let total = 0;
-      for (let key in dropRates) {
-        total += dropRates[key];
-        if (r < total) return key;
+  /***** State *****/
+  let gold = 50;
+  // collection mapping name -> {count, rarity, name}
+  let collection = {};
+  let selectedWeaponIndex = null; // index into displayed owned items array (for selection)
+  let ownedList = []; // flattened list for selection (built from collection)
+  let chestOpen = false;
+
+  /***** DOM refs *****/
+  const chestEl = document.getElementById('chest');
+  const glowEl = document.getElementById('glow');
+  const goldEl = document.getElementById('gold');
+  const openBtn = document.getElementById('openBtn');
+  const sellBtn = document.getElementById('sellBtn');
+  const gridEl = document.getElementById('grid');
+
+  /***** Utility: create pixel SVG icon data-URI dynamically *****/
+  function makeSvgDataURI(svgString){
+    // encode as URI component for safety
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svgString);
+  }
+
+  function iconSvgFor(type, color, person=false){
+    // small 48x48 pixel-y SVG. Simple shapes, stylized.
+    // color expected like '#aabbcc'
+    const base = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'>
+        <rect width='48' height='48' fill='${color}' rx='6' />
+    `;
+    let mid='';
+    switch(type){
+      case 'sword':
+        mid += `<rect x='20' y='8' width='8' height='24' fill='#fff' rx='2' transform='rotate(-10 24 20)' />`;
+        mid += `<rect x='18' y='30' width='12' height='4' rx='1' fill='#8b6a2f' />`;
+        break;
+      case 'bow':
+        mid += `<path d='M10 12 C 20 6, 30 6, 38 12' stroke='#fff' stroke-width='3' fill='none' stroke-linecap='round' />`;
+        mid += `<line x1='12' y1='36' x2='36' y2='12' stroke='#000' stroke-width='2' />`;
+        break;
+      case 'wand':
+        mid += `<rect x='22' y='8' width='4' height='22' fill='#fff' rx='2' />`;
+        mid += `<circle cx='24' cy='6' r='4' fill='#ffd46e' />`;
+        break;
+      case 'staff':
+        mid += `<rect x='22' y='6' width='4' height='26' fill='#fff' rx='2' />`;
+        mid += `<circle cx='24' cy='10' r='6' fill='#ff8a6b' />`;
+        break;
+      case 'dagger':
+        mid += `<rect x='22' y='10' width='4' height='18' fill='#fff' rx='1' transform='rotate(12 24 19)' />`;
+        mid += `<rect x='21' y='28' width='6' height='4' fill='#8b6a2f' />`;
+        break;
+      case 'axe':
+        mid += `<rect x='20' y='20' width='8' height='12' fill='#8b6a2f' rx='2' />`;
+        mid += `<path d='M12 18 L30 18 L30 28 Z' fill='#fff' />`;
+        break;
+      case 'hammer':
+        mid += `<rect x='18' y='12' width='12' height='8' fill='#fff' />`;
+        mid += `<rect x='22' y='20' width='4' height='12' fill='#8b6a2f' />`;
+        break;
+      case 'spear':
+        mid += `<rect x='22' y='8' width='4' height='26' fill='#fff' />`;
+        mid += `<polygon points='24,6 18,12 30,12' fill='#c44' />`;
+        break;
+      case 'hammer':
+        mid += `<rect x='18' y='12' width='12' height='8' fill='#fff' />`;
+        mid += `<rect x='22' y='20' width='4' height='12' fill='#8b6a2f' />`;
+        break;
+      default:
+        mid += `<circle cx='24' cy='20' r='10' fill='#fff' />`;
+    }
+    const end = `</svg>`;
+    return base + mid + end;
+  }
+
+  // palette by rarity
+  const rarityColor = {
+    common:'#3a3a4a',
+    uncommon:'#0ea36b',
+    rare:'#1676ff',
+    epic:'#a44bff',
+    legendary:'#ffbf3f'
+  };
+
+  // returns dataURI for a weapon by index using its type and rarity color
+  function weaponDataURI(index){
+    const def = weaponDefs[index];
+    const color = rarityColor[def.rarity] || '#444';
+    const svg = iconSvgFor(def.type, color);
+    return makeSvgDataURI(svg);
+  }
+
+  // chest closed/open frames as SVG data URIs
+  function chestSvgDataURI(open){
+    // simple chest SVG, open param flips lid
+    const lidTransform = open ? "translate(0,-12) rotate(-18 80 60)" : "";
+    const lidColor = open ? "#ffdd9b" : "#c49a6c";
+    const bodyColor = "#6b3e1f";
+    const svg = `
+    <svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'>
+      <rect width='120' height='120' fill='none' />
+      <!-- chest body -->
+      <rect x='14' y='44' width='92' height='52' rx='6' fill='${bodyColor}' stroke='#331a0b' stroke-width='4'/>
+      <!-- lid -->
+      <g transform='${lidTransform}'>
+        <rect x='14' y='24' width='92' height='34' rx='6' fill='${lidColor}' stroke='#331a0b' stroke-width='4'/>
+      </g>
+      <!-- lock -->
+      <rect x='52' y='68' width='16' height='16' rx='3' fill='#2a1b10' stroke='#0f0f0f' stroke-width='2'/>
+    </svg>`;
+    return makeSvgDataURI(svg);
+  }
+
+  /***** Persistence *****/
+  function saveState(){
+    try {
+      localStorage.setItem('battlebox_gold', String(gold));
+      localStorage.setItem('battlebox_collection', JSON.stringify(collection));
+    } catch(e){}
+  }
+
+  function loadState(){
+    try {
+      const g = localStorage.getItem('battlebox_gold');
+      if(g !== null) gold = Number(g);
+      const coll = localStorage.getItem('battlebox_collection');
+      if(coll) collection = JSON.parse(coll);
+    } catch(e){}
+  }
+
+  /***** Helpers *****/
+  function randFromPool(pool){ return pool[Math.floor(Math.random()*pool.length)]; }
+
+  function pickRarity(){
+    const r = Math.random();
+    let cum = 0;
+    for(const key of ['common','uncommon','rare','epic','legendary']){
+      cum += dropRates[key];
+      if(r < cum) return key;
+    }
+    return 'common';
+  }
+
+  function pickWeaponByRarity(rarity){
+    const pool = weaponDefs.map((d,i)=> ({...d, index:i})).filter(d=>d.rarity === rarity);
+    if(pool.length === 0) return null;
+    return randFromPool(pool);
+  }
+
+  function addToCollection(def){
+    const name = def.name;
+    if(collection[name]){
+      collection[name].count += 1;
+    } else {
+      collection[name] = { name, rarity: def.rarity, count: 1, index: weaponDefs.findIndex(w=>w.name===name) };
+    }
+    rebuildOwnedList();
+    saveState();
+  }
+
+  function removeFromCollectionAtOwnedIndex(ownedIndex){
+    const entry = ownedList[ownedIndex];
+    if(!entry) return null;
+    const name = entry.name;
+    if(!collection[name]) return null;
+    collection[name].count -= 1;
+    if(collection[name].count <= 0) delete collection[name];
+    rebuildOwnedList();
+    saveState();
+    return entry;
+  }
+
+  function rebuildOwnedList(){
+    ownedList = [];
+    for(const k in collection){
+      const ent = collection[k];
+      for(let i=0;i<ent.count;i++){
+        ownedList.push({ name: ent.name, rarity: ent.rarity, index: ent.index });
       }
-      return 'common';
     }
+  }
 
-    function renderCollection() {
-      collectionEl.innerHTML = '';
-      collection.forEach((item, i) => {
-        const div = document.createElement('div');
-        div.classList.add('weapon', 'rarity-' + item.rarity);
-        if (selectedIndex === i) div.classList.add('selected');
-        div.title = `${item.name} (${item.rarity})`;
-        div.textContent = '⚔️';
-        div.onclick = () => {
-          if (selectedIndex === i) selectedIndex = null; else selectedIndex = i;
-          renderCollection();
-        };
-        collectionEl.appendChild(div);
-      });
+  /***** Render functions *****/
+  function renderChest(open=false){
+    chestEl.style.backgroundImage = `url("${chestSvgDataURI(open)}")`;
+  }
+
+  function flashGlow(){
+    glowEl.classList.add('show');
+    setTimeout(()=> glowEl.classList.remove('show'), 700);
+  }
+
+  function renderGrid(){
+    gridEl.innerHTML = '';
+    // show 20 cells in fixed order of definitions, but display counts on those owned
+    for(let i=0;i<weaponDefs.length;i++){
+      const def = weaponDefs[i];
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.classList.add('rarity-' + def.rarity);
+      // icon
+      const img = document.createElement('img');
+      img.className = 'icon';
+      img.src = weaponDataURI(i);
+      img.alt = def.name;
+      cell.appendChild(img);
+      // count overlay if owned
+      const ent = collection[def.name];
+      const count = ent ? ent.count : 0;
+      if(count > 0){
+        const badge = document.createElement('div');
+        badge.className = 'count';
+        badge.textContent = count;
+        cell.appendChild(badge);
+      }
+      // clickable: when clicked, select the first owned instance of that weapon in ownedList
+      cell.onclick = () => {
+        // find the owned list index of the first instance of this weapon
+        const firstIdx = ownedList.findIndex(o => o.name === def.name);
+        if(firstIdx === -1){
+          selectedWeaponIndex = null;
+        } else {
+          selectedWeaponIndex = firstIdx; // select the first occurrence
+        }
+        // visually highlight by toggling selected class across cells by rebuilding a selected map
+        // We'll mark selected cell by adding .selected for visual feedback using the name match + selectedIndex mapping
+        updateSelectionVisual(def.name);
+      };
+      // highlight if selected corresponds to this weapon's selected instance
+      if(selectedWeaponIndex !== null){
+        const sel = ownedList[selectedWeaponIndex];
+        if(sel && sel.name === def.name){
+          cell.classList.add('selected');
+        }
+      }
+      gridEl.appendChild(cell);
     }
+  }
 
-    document.getElementById('openChest').onclick = () => {
-      if (gold < 10) return alert('Not enough gold!');
-      gold -= 10;
-      const rarity = getRarity();
-      const name = weapons[Math.floor(Math.random() * weapons.length)];
-      collection.push({ name, rarity });
-      updateGold();
-      renderCollection();
-    };
+  function updateSelectionVisual(nameSelected){
+    // We will set .selected on the first matching cell
+    const cells = Array.from(gridEl.children);
+    cells.forEach((c, idx) => {
+      c.classList.remove('selected');
+      const def = weaponDefs[idx];
+      if(selectedWeaponIndex !== null){
+        const sel = ownedList[selectedWeaponIndex];
+        if(sel && sel.name === def.name){
+          c.classList.add('selected');
+        }
+      }
+    });
+  }
 
-    document.getElementById('sellButton').onclick = () => {
-      if (selectedIndex === null) return alert('Select a weapon first!');
-      const item = collection[selectedIndex];
-      gold += sellValues[item.rarity];
-      collection.splice(selectedIndex, 1);
-      selectedIndex = null;
-      updateGold();
-      renderCollection();
-    };
+  function refreshUI(){
+    goldEl.textContent = gold;
+    renderGrid();
+  }
 
-    renderCollection();
-  </script>
+  /***** Actions *****/
+  function openChestAction(){
+    if(gold < 10){ alert('Not enough gold to open a chest!'); return; }
+    gold -= 10;
+    saveState();
+    updateGoldNow();
+    // animate chest open simple
+    renderChest(true);
+    flashGlow();
+    chestEl.classList.add('open');
+    // pick rarity and weapon
+    const rarity = pickRarity();
+    const pick = pickWeaponByRarity(rarity) || randFromPool(weaponDefs.map((d,i)=>({...d,index:i})));
+    // add after small timeout so player sees chest animation
+    setTimeout(()=>{
+      addToCollection(pick);
+      chestEl.classList.remove('open');
+      renderChest(false);
+      refreshUI();
+      // quick toast
+      quickToast(`${pick.name} (${pick.rarity.toUpperCase()})`);
+    }, 700);
+  }
+
+  function sellSelectedAction(){
+    if(selectedWeaponIndex === null){ alert('Select a weapon from your collection first (click a cell)'); return; }
+    const entry = ownedList[selectedWeaponIndex];
+    if(!entry){ alert('Invalid selection'); return; }
+    const value = sellValues[entry.rarity] || 0;
+    // remove one copy
+    removeFromCollectionAtOwnedIndex(selectedWeaponIndex);
+    // clear selection
+    selectedWeaponIndex = null;
+    // add gold
+    gold += value;
+    saveState();
+    refreshUI();
+    updateGoldNow();
+    quickToast(`Sold ${entry.name} for ${value}g`);
+  }
+
+  /***** small UI helpers *****/
+  function updateGoldNow(){ goldEl.textContent = gold; }
+  function quickToast(text){
+    // temporary text on chest area
+    const ctx = chestEl;
+    const t = document.createElement('div');
+    t.textContent = text;
+    t.style.position='absolute';
+    t.style.bottom='4px';
+    t.style.left='50%';
+    t.style.transform='translateX(-50%)';
+    t.style.fontSize='11px';
+    t.style.color='#fff';
+    t.style.pointerEvents='none';
+    t.style.padding='6px 8px';
+    t.style.background='rgba(0,0,0,0.5)';
+    t.style.borderRadius='6px';
+    t.style.border='1px solid rgba(255,255,255,0.04)';
+    t.style.zIndex='40';
+    chestEl.parentElement.appendChild(t);
+    setTimeout(()=> t.remove(), 1300);
+  }
+
+  /***** wiring *****/
+  function init(){
+    loadState();
+    rebuildOwnedList();
+    updateGoldNow();
+    renderChest(false);
+    refreshUI();
+    openBtn.addEventListener('click', openChestAction);
+    sellBtn.addEventListener('click', sellSelectedAction);
+  }
+
+  init();
+
+})();
+</script>
 </body>
 </html>
