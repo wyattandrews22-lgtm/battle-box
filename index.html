@@ -1,205 +1,72 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>⚔️ Battle Box ⚔️</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
-    :root{
-      --bg:#0f1020;
-      --panel:#181830;
-      --accent:#ffb347;
-      --gold:#ffd166;
-      --muted:#9aa0b0;
-      --cell-size:64px;
-    }
-
-    html,body{
-      height:100%;
-      margin:0;
-      background:var(--bg);
-      color:#fff;
-      font-family: "Press Start 2P", monospace;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-    }
-
-    .app {
-      display:flex;
-      gap:32px;
-      align-items:flex-start;
-      justify-content:center;
-      padding:32px;
-      box-sizing:border-box;
-    }
-
-    /* Left column: title, chest, controls */
-    .left {
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      align-items:center;
-      width:260px;
-    }
-
-    h1 { color:var(--accent); margin:4px 0 12px; font-size:20px; text-align:center; }
-
-    .chest-wrap {
-      position:relative;
-      width:160px;
-      height:160px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:linear-gradient(180deg,#202038,#141425);
-      border:3px solid #29293e;
-      border-radius:12px;
-      box-shadow: 6px 6px 0 rgba(0,0,0,0.6);
-      overflow:visible;
-    }
-
-    .chest {
-      width:120px;
-      height:120px;
-      background-size:contain;
-      background-repeat:no-repeat;
-      transition: transform 0.12s linear;
-      will-change: transform;
-      filter: drop-shadow(0 6px 6px rgba(0,0,0,0.6));
-    }
-
-    .chest.open {
-      transform: translateY(-6px) scale(1.02);
-    }
-
-    .glow {
-      position:absolute;
-      width:140px;
-      height:140px;
-      border-radius:8px;
-      box-shadow: 0 0 28px 6px rgba(255,186,80,0.24);
-      pointer-events:none;
-      opacity:0;
-      transition: opacity .18s ease;
-    }
-    .glow.show { opacity:1; }
-
-    .goldbox {
-      background:linear-gradient(180deg,#332b18,#1f1a12);
-      padding:8px 12px;
-      border-radius:8px;
-      border:2px solid rgba(255,180,80,0.18);
-      color:var(--gold);
-      font-size:12px;
-      width:100%;
-      text-align:center;
-      box-shadow: inset 0 -6px 12px rgba(0,0,0,0.2);
-    }
-
-    .controls { display:flex; gap:12px; margin-top:8px; }
-    button {
-      background:linear-gradient(180deg,#d47c1b,#b85f0a);
-      border:2px solid rgba(255,180,80,0.2);
-      padding:8px 10px;
-      color:white;
-      cursor:pointer;
-      font-family: inherit;
-      font-size:11px;
-      border-radius:8px;
-      box-shadow: 3px 3px 0 rgba(0,0,0,0.6);
-    }
-    button:active { transform: translateY(2px); }
-    button[disabled] { opacity:0.45; cursor:not-allowed; transform:none; }
-
-    /* Right column: collection */
-    .collection-panel {
-      width:420px;
-      background:var(--panel);
-      border-radius:12px;
-      border:3px solid rgba(255,180,80,0.06);
-      padding:14px;
-      box-shadow: 6px 6px 0 rgba(0,0,0,0.6);
-    }
-    .collection-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-    .collection-title { color:var(--accent); font-size:12px; }
-    .collection-sub { color:var(--muted); font-size:9px; }
-
-    .grid {
-      display:grid;
-      grid-template-columns: repeat(5, var(--cell-size));
-      grid-auto-rows: var(--cell-size);
-      gap:10px;
-      justify-content:center;
-    }
-
-    .cell {
-      width:var(--cell-size);
-      height:var(--cell-size);
-      background:#0f1220;
-      border:2px solid #26273a;
-      border-radius:8px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      position:relative;
-      cursor:pointer;
-      overflow:hidden;
-    }
-
-    .cell .count {
-      position:absolute;
-      bottom:4px;
-      right:6px;
-      font-size:10px;
-      color:#fff;
-      background:rgba(0,0,0,0.25);
-      padding:2px 4px;
-      border-radius:6px;
-      border:1px solid rgba(255,255,255,0.06);
-    }
-
-    .cell.selected {
-      outline:3px solid rgba(255,179,71,0.9);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 18px rgba(255,149,35,0.08);
-    }
-
-    .cell .icon {
-      width:48px;
-      height:48px;
-      image-rendering: pixelated;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
-    }
-
-    /* rarity borders (additional accent) */
-    .rarity-common { border-color: #3a3a4a; }
-    .rarity-uncommon { border-color: #0ea36b; box-shadow: inset 0 0 12px rgba(14,163,107,0.04); }
-    .rarity-rare { border-color: #1676ff; box-shadow: inset 0 0 12px rgba(22,118,255,0.05); }
-    .rarity-epic { border-color: #a44bff; box-shadow: inset 0 0 12px rgba(164,75,255,0.06); }
-    .rarity-legendary { border-color: #ffbf3f; box-shadow: inset 0 0 12px rgba(255,191,63,0.08); }
-
-    .footer-note { color:var(--muted); font-size:10px; margin-top:8px; text-align:center; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>⚔️ Battle Box ⚔️</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+  :root{
+    --bg:#0f1020; --panel:#181830; --accent:#ffb347; --gold:#ffd166; --muted:#9aa0b0;
+    --cell:64px;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:"Press Start 2P",monospace}
+  .app{display:flex;gap:24px;align-items:flex-start;justify-content:center;padding:18px;box-sizing:border-box}
+  .left{width:260px;display:flex;flex-direction:column;align-items:center;gap:10px}
+  h1{color:var(--accent);margin:0 0 6px;font-size:20px;text-align:center}
+  .chest-wrap{position:relative;width:160px;height:160px;background:linear-gradient(180deg,#202038,#141425);border:3px solid #29293e;border-radius:12px;display:flex;align-items:center;justify-content:center}
+  .chest{width:120px;height:120px;background-size:contain;background-repeat:no-repeat;transition:transform .12s;will-change:transform;filter:drop-shadow(0 6px 6px rgba(0,0,0,.6))}
+  .chest.open{transform:translateY(-6px) scale(1.02)}
+  .glow{position:absolute;width:140px;height:140px;border-radius:8px;box-shadow:0 0 28px 6px rgba(255,186,80,0.24);pointer-events:none;opacity:0;transition:opacity .18s}
+  .glow.show{opacity:1}
+  .goldbox{background:linear-gradient(180deg,#332b18,#1f1a12);padding:8px 12px;border-radius:8px;border:2px solid rgba(255,180,80,.18);color:var(--gold);font-size:11px;width:100%;text-align:center;box-shadow:inset 0 -6px 12px rgba(0,0,0,.2)}
+  .controls{display:flex;gap:8px;margin-top:8px}
+  button{background:linear-gradient(180deg,#d47c1b,#b85f0a);border:2px solid rgba(255,180,80,.2);padding:8px 10px;color:white;cursor:pointer;font-family:inherit;font-size:11px;border-radius:8px;box-shadow:3px 3px 0 rgba(0,0,0,.6)}
+  button:active{transform:translateY(2px)} button[disabled]{opacity:.45;cursor:not-allowed}
+  .collection-panel{width:420px;background:var(--panel);border-radius:12px;border:3px solid rgba(255,180,80,.06);padding:14px;box-shadow:6px 6px 0 rgba(0,0,0,.6)}
+  .collection-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .collection-title{color:var(--accent);font-size:12px}
+  .collection-sub{color:var(--muted);font-size:9px}
+  .grid{display:grid;grid-template-columns:repeat(5,var(--cell));grid-auto-rows:var(--cell);gap:10px;justify-content:center}
+  .cell{width:var(--cell);height:var(--cell);background:#0f1220;border:2px solid #26273a;border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;overflow:hidden}
+  .cell .count{position:absolute;bottom:6px;right:6px;font-size:10px;color:#fff;background:rgba(0,0,0,.25);padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.06)}
+  .cell.selected{outline:3px solid rgba(255,179,71,.9);transform:translateY(-2px);box-shadow:0 8px 18px rgba(255,149,35,.08)}
+  .icon{width:48px;height:48px;image-rendering:pixelated;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+  .rarity-common{border-color:#3a3a4a}
+  .rarity-uncommon{border-color:#0ea36b}
+  .rarity-rare{border-color:#1676ff}
+  .rarity-epic{border-color:#a44bff}
+  .rarity-legendary{border-color:#ffbf3f}
+  .book-btn{position:fixed;right:16px;bottom:16px;width:56px;height:56px;border-radius:10px;background:linear-gradient(180deg,#22223a,#141426);border:3px solid rgba(255,180,80,.08);display:flex;align-items:center;justify-content:center;z-index:80;box-shadow:6px 6px 0 rgba(0,0,0,.6);cursor:pointer}
+  .book-btn img{width:36px;height:36px;image-rendering:pixelated}
+  /* full-screen translucent overlay */
+  .overlay{position:fixed;inset:0;background:rgba(8,8,16,0.84);display:flex;align-items:center;justify-content:center;z-index:100;padding:24px}
+  .overlay .sheet{width:min(92vw,720px);height:min(86vh,720px);background:linear-gradient(180deg,#121227,#1a1a36);border-radius:12px;border:3px solid rgba(255,186,80,.06);padding:16px;box-sizing:border-box;overflow:auto}
+  .overlay .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .overlay .close{background:transparent;border:2px solid rgba(255,255,255,.06);padding:8px;border-radius:8px;color:var(--gold);cursor:pointer}
+  .mobile-friendly{touch-action:manipulation}
+  @media (max-width:800px){
+    .app{flex-direction:column;align-items:center;padding:12px}
+    .collection-panel{width:92vw}
+    .left{width:92vw}
+    .book-btn{right:10px;bottom:10px}
+  }
+</style>
 </head>
 <body>
-  <div class="app">
+  <div class="app mobile-friendly">
     <div class="left">
       <h1>⚔️ Battle Box ⚔️</h1>
-
       <div class="chest-wrap">
         <div id="glow" class="glow"></div>
         <div id="chest" class="chest"></div>
       </div>
-
       <div class="goldbox">💰 <span id="gold">50</span> gold</div>
-
       <div class="controls">
         <button id="openBtn">Open Chest (10g)</button>
         <button id="sellBtn">Sell Selected</button>
       </div>
-      <div class="footer-note">Click a weapon on the right, then press <strong>Sell Selected</strong></div>
+      <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">Click a weapon on the right, then press <strong>Sell Selected</strong></div>
     </div>
 
     <div class="collection-panel" aria-label="Collection Book">
@@ -209,19 +76,36 @@
           <div class="collection-sub">Collect all 20 weapons</div>
         </div>
         <div style="text-align:right;">
-          <div style="color:var(--muted); font-size:10px;">Chest cost</div>
-          <div style="color:var(--gold); font-size:12px;">10 gold</div>
+          <div style="color:var(--muted);font-size:10px">Chest cost</div>
+          <div style="color:var(--gold);font-size:12px">10 gold</div>
         </div>
       </div>
-
       <div id="grid" class="grid" role="list"></div>
     </div>
   </div>
 
-<script>
-(function(){
+  <!-- book toggle -->
+  <div id="bookBtn" class="book-btn" title="Open Collection (Full Screen)">
+    <!-- small book pixel SVG -->
+    <img id="bookIcon" alt="book" src="">
+  </div>
 
-  /***** Game data *****/
+  <!-- overlay (hidden by default) -->
+  <div id="overlay" class="overlay" style="display:none;">
+    <div class="sheet">
+      <div class="top">
+        <div style="color:var(--accent);font-size:12px">Collection Book</div>
+        <button id="closeOverlay" class="close">Close</button>
+      </div>
+      <div id="overlayGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;"></div>
+    </div>
+  </div>
+
+<script>
+/* ===== Battle Box - single-file (pixel icons + webaudio) ===== */
+
+(function(){
+  // === Data ===
   const weaponDefs = [
     { name:'Iron Sword',      type:'sword', rarity:'common' },
     { name:'Steel Sword',     type:'sword', rarity:'common' },
@@ -245,155 +129,329 @@
     { name:'Divine Hammer',   type:'hammer',rarity:'legendary' }
   ];
 
-  // dropRates — must sum to ~1; legendary very rare
-  const dropRates = {
-    common: 0.50,
-    uncommon: 0.30,
-    rare: 0.12,
-    epic: 0.06,
-    legendary: 0.02
-  };
+  const dropRates = { common:0.50, uncommon:0.30, rare:0.12, epic:0.06, legendary:0.02 };
+  const sellValues = { common:5, uncommon:10, rare:20, epic:50, legendary:100 };
+  const rarityOrder = { common:0, uncommon:1, rare:2, epic:3, legendary:4 };
+  const rarityColor = { common:'#3a3a4a', uncommon:'#0ea36b', rare:'#1676ff', epic:'#a44bff', legendary:'#ffbf3f' };
 
-  const sellValues = {
-    common: 5,
-    uncommon: 10,
-    rare: 20,
-    epic: 50,
-    legendary: 100
-  };
-
-  /***** State *****/
+  // === State ===
   let gold = 50;
-  // collection mapping name -> {count, rarity, name}
-  let collection = {};
-  let selectedWeaponIndex = null; // index into displayed owned items array (for selection)
-  let ownedList = []; // flattened list for selection (built from collection)
-  let chestOpen = false;
-
-  /***** DOM refs *****/
-  const chestEl = document.getElementById('chest');
-  const glowEl = document.getElementById('glow');
+  let collection = {}; // name -> {name, rarity, count, index}
+  let ownedList = []; // flattened owned entries for selection semantics
+  let selectedOwnedIndex = null; // index into ownedList
+  // DOM refs
   const goldEl = document.getElementById('gold');
   const openBtn = document.getElementById('openBtn');
   const sellBtn = document.getElementById('sellBtn');
+  const chestEl = document.getElementById('chest');
+  const glowEl = document.getElementById('glow');
   const gridEl = document.getElementById('grid');
+  const bookBtn = document.getElementById('bookBtn');
+  const bookIcon = document.getElementById('bookIcon');
+  const overlay = document.getElementById('overlay');
+  const overlayGrid = document.getElementById('overlayGrid');
+  const closeOverlay = document.getElementById('closeOverlay');
 
-  /***** Utility: create pixel SVG icon data-URI dynamically *****/
-  function makeSvgDataURI(svgString){
-    // encode as URI component for safety
-    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svgString);
+  // === Pixel icon generator (SVG blocks to emulate pixel art) ===
+  function makeSvgDataURI(svgStr){
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svgStr);
   }
 
-  function iconSvgFor(type, color, person=false){
-    // small 48x48 pixel-y SVG. Simple shapes, stylized.
-    // color expected like '#aabbcc'
-    const base = `
-      <svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'>
-        <rect width='48' height='48' fill='${color}' rx='6' />
-    `;
-    let mid='';
-    switch(type){
+  function pixelIcon(def){
+    // base palette by rarity color and black background
+    const bg = '#111118';
+    const accent = rarityColor[def.rarity] || '#666';
+    // We'll draw a tiny 6x6 "pixel" grid scaled up (8px per pixel in the viewbox)
+    // and compose simple shapes depending on type
+    // Build rectangles at certain grid coords to form rough icons
+    const p = (x,y) => `<rect x="${x*8}" y="${y*8}" width="8" height="8" />`;
+    let blocks = '';
+    // common base shape for weapon types
+    switch(def.type){
       case 'sword':
-        mid += `<rect x='20' y='8' width='8' height='24' fill='#fff' rx='2' transform='rotate(-10 24 20)' />`;
-        mid += `<rect x='18' y='30' width='12' height='4' rx='1' fill='#8b6a2f' />`;
+        blocks += p(2,0)+p(2,1)+p(2,2)+p(2,3)+p(2,4); // blade
+        blocks += p(1,4)+p(3,4); // guard
+        blocks += p(2,5); // pommel
         break;
       case 'bow':
-        mid += `<path d='M10 12 C 20 6, 30 6, 38 12' stroke='#fff' stroke-width='3' fill='none' stroke-linecap='round' />`;
-        mid += `<line x1='12' y1='36' x2='36' y2='12' stroke='#000' stroke-width='2' />`;
+        blocks += p(0,1)+p(1,1)+p(2,1)+p(3,1)+p(4,1);
+        blocks += p(0,2)+p(4,2);
+        blocks += p(0,3)+p(4,3);
         break;
       case 'wand':
-        mid += `<rect x='22' y='8' width='4' height='22' fill='#fff' rx='2' />`;
-        mid += `<circle cx='24' cy='6' r='4' fill='#ffd46e' />`;
+        blocks += p(2,1)+p(2,2)+p(2,3)+p(2,4);
+        blocks += p(2,0);
         break;
       case 'staff':
-        mid += `<rect x='22' y='6' width='4' height='26' fill='#fff' rx='2' />`;
-        mid += `<circle cx='24' cy='10' r='6' fill='#ff8a6b' />`;
+        blocks += p(2,1)+p(2,2)+p(2,3)+p(2,4)+p(2,5);
+        blocks += p(1,1)+p(3,1);
         break;
       case 'dagger':
-        mid += `<rect x='22' y='10' width='4' height='18' fill='#fff' rx='1' transform='rotate(12 24 19)' />`;
-        mid += `<rect x='21' y='28' width='6' height='4' fill='#8b6a2f' />`;
+        blocks += p(2,1)+p(2,2)+p(2,3);
+        blocks += p(1,3)+p(3,3);
         break;
       case 'axe':
-        mid += `<rect x='20' y='20' width='8' height='12' fill='#8b6a2f' rx='2' />`;
-        mid += `<path d='M12 18 L30 18 L30 28 Z' fill='#fff' />`;
+        blocks += p(1,1)+p(2,1)+p(3,1);
+        blocks += p(1,2)+p(3,2);
+        blocks += p(2,3);
         break;
       case 'hammer':
-        mid += `<rect x='18' y='12' width='12' height='8' fill='#fff' />`;
-        mid += `<rect x='22' y='20' width='4' height='12' fill='#8b6a2f' />`;
+        blocks += p(1,1)+p(2,1)+p(3,1);
+        blocks += p(2,2);
+        blocks += p(2,3)+p(2,4);
         break;
       case 'spear':
-        mid += `<rect x='22' y='8' width='4' height='26' fill='#fff' />`;
-        mid += `<polygon points='24,6 18,12 30,12' fill='#c44' />`;
-        break;
-      case 'hammer':
-        mid += `<rect x='18' y='12' width='12' height='8' fill='#fff' />`;
-        mid += `<rect x='22' y='20' width='4' height='12' fill='#8b6a2f' />`;
+      case 'trident':
+        blocks += p(2,0)+p(2,1)+p(2,2)+p(2,3)+p(2,4);
+        blocks += p(1,1)+p(3,1);
         break;
       default:
-        mid += `<circle cx='24' cy='20' r='10' fill='#fff' />`;
+        blocks += p(2,2)+p(2,3)+p(1,3)+p(3,3);
     }
-    const end = `</svg>`;
-    return base + mid + end;
-  }
 
-  // palette by rarity
-  const rarityColor = {
-    common:'#3a3a4a',
-    uncommon:'#0ea36b',
-    rare:'#1676ff',
-    epic:'#a44bff',
-    legendary:'#ffbf3f'
-  };
-
-  // returns dataURI for a weapon by index using its type and rarity color
-  function weaponDataURI(index){
-    const def = weaponDefs[index];
-    const color = rarityColor[def.rarity] || '#444';
-    const svg = iconSvgFor(def.type, color);
+    // color mapping: blade/metal -> white-ish; accent overlay by rarity color
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'>
+      <rect width='48' height='48' fill='${bg}' rx='6'/>
+      <g fill='#ffffff' opacity='0.92'>${blocks}</g>
+      <g fill='${accent}' opacity='0.22'>${blocks}</g>
+    </svg>`;
     return makeSvgDataURI(svg);
   }
 
-  // chest closed/open frames as SVG data URIs
-  function chestSvgDataURI(open){
-    // simple chest SVG, open param flips lid
-    const lidTransform = open ? "translate(0,-12) rotate(-18 80 60)" : "";
-    const lidColor = open ? "#ffdd9b" : "#c49a6c";
-    const bodyColor = "#6b3e1f";
-    const svg = `
-    <svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'>
-      <rect width='120' height='120' fill='none' />
-      <!-- chest body -->
-      <rect x='14' y='44' width='92' height='52' rx='6' fill='${bodyColor}' stroke='#331a0b' stroke-width='4'/>
-      <!-- lid -->
+  // book icon (small)
+  function bookIconURI(){
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'>
+      <rect width='48' height='48' rx='8' fill='#222232'/>
+      <rect x='8' y='10' width='28' height='28' rx='4' fill='#2f2f48' stroke='#ffbf3f' stroke-width='2'/>
+      <rect x='14' y='14' width='6' height='1.5' fill='#ffd786'/>
+      <rect x='14' y='18' width='10' height='1.5' fill='#ffd786'/>
+      <rect x='14' y='22' width='8' height='1.5' fill='#ffd786'/>
+    </svg>`;
+    return makeSvgDataURI(svg);
+  }
+
+  // chest SVG data URIs
+  function chestURI(open){
+    const body = '#6b3e1f', lid = open? '#ffdd9b' : '#c49a6c';
+    const lidTransform = open ? "translate(0,-12) rotate(-18 60 36)" : "";
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'>
+      <rect width='120' height='120' fill='none'/>
+      <rect x='14' y='44' width='92' height='52' rx='6' fill='${body}' stroke='#331a0b' stroke-width='4'/>
       <g transform='${lidTransform}'>
-        <rect x='14' y='24' width='92' height='34' rx='6' fill='${lidColor}' stroke='#331a0b' stroke-width='4'/>
+        <rect x='14' y='24' width='92' height='34' rx='6' fill='${lid}' stroke='#331a0b' stroke-width='4'/>
       </g>
-      <!-- lock -->
       <rect x='52' y='68' width='16' height='16' rx='3' fill='#2a1b10' stroke='#0f0f0f' stroke-width='2'/>
     </svg>`;
     return makeSvgDataURI(svg);
   }
 
-  /***** Persistence *****/
-  function saveState(){
+  // === Audio: small synth loop + fx with WebAudio ===
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const audioCtx = new AudioCtx();
+  let musicGain;
+
+  function startMusicLoop(){
     try {
-      localStorage.setItem('battlebox_gold', String(gold));
-      localStorage.setItem('battlebox_collection', JSON.stringify(collection));
-    } catch(e){}
+      // create a simple synth loop (low-weight) — light so page size small
+      musicGain = audioCtx.createGain();
+      musicGain.gain.value = 0.08; // low volume
+      musicGain.connect(audioCtx.destination);
+
+      // two oscillators with LFO amplitude envelope for looped arpeggio
+      const master = audioCtx.createGain();
+      master.gain.value = 0.0;
+      master.connect(musicGain);
+
+      // pattern: sequence of notes using scheduled oscillators
+      const notes = [220, 262, 196, 233]; // base frequencies
+      const now = audioCtx.currentTime;
+      const loopDuration = 2.4;
+      for(let i=0;i<notes.length;i++){
+        const t = now + i * (loopDuration / notes.length);
+        const o = audioCtx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(notes[i], t);
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.09, t+0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + (loopDuration/notes.length) * 0.98);
+        o.connect(g); g.connect(master);
+        o.start(t); o.stop(t + (loopDuration/notes.length));
+      }
+      // schedule repeating using periodic scheduler
+      // We'll create a repeating timeline by using setInterval to schedule next group
+      // Simpler: create a repeating oscillator chord with LFO
+      // Add subtle ambient oscillator
+      const ambient = audioCtx.createOscillator();
+      ambient.type = 'triangle';
+      ambient.frequency.value = 40;
+      const ambientGain = audioCtx.createGain();
+      ambientGain.gain.value = 0.02;
+      ambient.connect(ambientGain); ambientGain.connect(musicGain);
+      ambient.start();
+
+      // To keep CPU low, create one repeating pattern via ScriptProcessor-like scheduling
+      // We'll also set a small gain that we can fade in
+      musicGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+      musicGain.gain.linearRampToValueAtTime(1.0, audioCtx.currentTime + 0.5);
+    } catch(e){
+      // audio context may be suspended until user interacts
+      console.warn('Audio start failed:', e);
+    }
   }
 
-  function loadState(){
-    try {
-      const g = localStorage.getItem('battlebox_gold');
-      if(g !== null) gold = Number(g);
-      const coll = localStorage.getItem('battlebox_collection');
-      if(coll) collection = JSON.parse(coll);
-    } catch(e){}
+  function playChestSound(){
+    try{
+      const o = audioCtx.createOscillator();
+      o.type = 'square';
+      const g = audioCtx.createGain();
+      g.gain.value = 0.0;
+      o.frequency.setValueAtTime(520, audioCtx.currentTime);
+      g.gain.setValueAtTime(0, audioCtx.currentTime);
+      g.gain.linearRampToValueAtTime(0.16, audioCtx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.28);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + 0.32);
+    }catch(e){}
   }
 
-  /***** Helpers *****/
-  function randFromPool(pool){ return pool[Math.floor(Math.random()*pool.length)]; }
+  function playCoinSound(){
+    try{
+      const now = audioCtx.currentTime;
+      const o = audioCtx.createOscillator();
+      o.type='triangle'; o.frequency.setValueAtTime(880, now);
+      const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0, now);
+      g.gain.linearRampToValueAtTime(0.14, now + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+      o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(now + 0.26);
+    }catch(e){}
+  }
 
+  function playBookSound(){
+    try{
+      const now = audioCtx.currentTime;
+      const o1 = audioCtx.createOscillator(), o2 = audioCtx.createOscillator();
+      o1.type='square'; o2.type='sine';
+      o1.frequency.setValueAtTime(440, now); o2.frequency.setValueAtTime(330, now);
+      const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0, now);
+      g.gain.linearRampToValueAtTime(0.08, now+0.01); g.gain.exponentialRampToValueAtTime(0.0001, now+0.18);
+      o1.connect(g); o2.connect(g); g.connect(audioCtx.destination);
+      o1.start(); o2.start(); o1.stop(now+0.18); o2.stop(now+0.18);
+    }catch(e){}
+  }
+
+  // === Persistence ===
+  function saveState(){ try{ localStorage.setItem('bb_gold',String(gold)); localStorage.setItem('bb_collection',JSON.stringify(collection)); }catch(e){} }
+  function loadState(){ try{ const g=localStorage.getItem('bb_gold'); if(g!==null) gold=Number(g); const col=localStorage.getItem('bb_collection'); if(col) collection=JSON.parse(col); }catch(e){} }
+
+  // === collection helpers ===
+  function rebuildOwnedList(){
+    ownedList = [];
+    Object.keys(collection).forEach(name => {
+      const ent = collection[name];
+      for(let i=0;i<ent.count;i++){
+        ownedList.push({ name: ent.name, rarity: ent.rarity, index: ent.index });
+      }
+    });
+  }
+
+  function addToCollection(entry){
+    const name = entry.name;
+    if(collection[name]) collection[name].count += 1;
+    else collection[name] = { name, rarity: entry.rarity, count: 1, index: entry.index };
+    rebuildOwnedList();
+    saveState();
+  }
+
+  function removeOneOwnedAt(index){
+    const ent = ownedList[index];
+    if(!ent) return null;
+    const name = ent.name;
+    if(!collection[name]) return null;
+    collection[name].count -= 1;
+    if(collection[name].count <= 0) delete collection[name];
+    rebuildOwnedList();
+    saveState();
+    return ent;
+  }
+
+  // === UI render ===
+  function renderChest(open=false){ chestEl.style.backgroundImage = `url("${chestURI(open)}")`; chestEl.classList.toggle('open', open); }
+  function flashGlow(){ glowEl.classList.add('show'); setTimeout(()=>glowEl.classList.remove('show'),700); }
+
+  // produce weapon icon src
+  function weaponIconSrcByIndex(i){ return pixelIcon(weaponDefs[i]); }
+
+  // grid sorted by rarity (common->legendary), then name
+  function sortedDefs(){
+    return weaponDefs.slice().sort((a,b)=>{
+      const ra = rarityOrder[a.rarity], rb = rarityOrder[b.rarity];
+      if(ra !== rb) return ra - rb;
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  function renderGrid(){
+    gridEl.innerHTML = '';
+    const defs = sortedDefs();
+    defs.forEach(def => {
+      const idx = weaponDefs.findIndex(w=>w.name===def.name);
+      const cell = document.createElement('div'); cell.className='cell rarity-'+def.rarity;
+      // icon
+      const img = document.createElement('img'); img.className='icon'; img.src = weaponIconSrcByIndex(idx); img.alt = def.name;
+      cell.appendChild(img);
+      // count overlay
+      const ent = collection[def.name];
+      const count = ent ? ent.count : 0;
+      if(count>0){ const b = document.createElement('div'); b.className='count'; b.textContent = count; cell.appendChild(b); }
+      // click behavior: toggle selection to first owned instance of this name, or clear if none
+      cell.onclick = () => {
+        const firstOwnedIdx = ownedList.findIndex(o => o.name === def.name);
+        if(firstOwnedIdx === -1) { selectedOwnedIndex = null; }
+        else { selectedOwnedIndex = firstOwnedIdx; }
+        updateSelectionVisual();
+      };
+      // highlight if selected corresponds to this weapon
+      if(selectedOwnedIndex !== null){
+        const sel = ownedList[selectedOwnedIndex];
+        if(sel && sel.name === def.name) cell.classList.add('selected');
+      }
+      gridEl.appendChild(cell);
+    });
+  }
+
+  function renderOverlayGrid(){
+    overlayGrid.innerHTML = '';
+    const defs = sortedDefs();
+    defs.forEach(def => {
+      const idx = weaponDefs.findIndex(w=>w.name===def.name);
+      const cell = document.createElement('div'); cell.style.padding='8px'; cell.style.background='rgba(0,0,0,0.06)'; cell.style.borderRadius='8px';
+      cell.style.display='flex'; cell.style.flexDirection='column'; cell.style.alignItems='center'; cell.style.justifyContent='center';
+      const img = document.createElement('img'); img.src = weaponIconSrcByIndex(idx); img.style.width='48px'; img.style.height='48px'; img.style.imageRendering='pixelated';
+      const label = document.createElement('div'); label.textContent = def.name; label.style.fontSize='10px'; label.style.marginTop='6px';
+      label.style.color = '#fff';
+      const ent = collection[def.name]; const count = ent?ent.count:0;
+      const cnt = document.createElement('div'); cnt.textContent = count?('Owned: '+count):'Locked'; cnt.style.fontSize='10px'; cnt.style.color = ent? '#ffd' : '#666';
+      cell.appendChild(img); cell.appendChild(label); cell.appendChild(cnt);
+      overlayGrid.appendChild(cell);
+    });
+  }
+
+  function updateSelectionVisual(){
+    // mark selected cell in main grid by name
+    const cells = Array.from(gridEl.children);
+    cells.forEach((cell, idx) => {
+      cell.classList.remove('selected');
+      const def = sortedDefs()[idx];
+      if(selectedOwnedIndex !== null){
+        const sel = ownedList[selectedOwnedIndex];
+        if(sel && sel.name === def.name) cell.classList.add('selected');
+      }
+    });
+    // also update overlay selection counts if visible
+  }
+
+  // === random / drop logic ===
   function pickRarity(){
     const r = Math.random();
     let cum = 0;
@@ -404,197 +462,117 @@
     return 'common';
   }
 
-  function pickWeaponByRarity(rarity){
-    const pool = weaponDefs.map((d,i)=> ({...d, index:i})).filter(d=>d.rarity === rarity);
-    if(pool.length === 0) return null;
-    return randFromPool(pool);
+  function pickWeaponByRarity(r){
+    const pool = weaponDefs.map((d,i)=>({...d,index:i})).filter(d=>d.rarity===r);
+    if(pool.length===0) return null;
+    return pool[Math.floor(Math.random()*pool.length)];
   }
 
-  function addToCollection(def){
-    const name = def.name;
-    if(collection[name]){
-      collection[name].count += 1;
-    } else {
-      collection[name] = { name, rarity: def.rarity, count: 1, index: weaponDefs.findIndex(w=>w.name===name) };
-    }
-    rebuildOwnedList();
-    saveState();
-  }
-
-  function removeFromCollectionAtOwnedIndex(ownedIndex){
-    const entry = ownedList[ownedIndex];
-    if(!entry) return null;
-    const name = entry.name;
-    if(!collection[name]) return null;
-    collection[name].count -= 1;
-    if(collection[name].count <= 0) delete collection[name];
-    rebuildOwnedList();
-    saveState();
-    return entry;
-  }
-
-  function rebuildOwnedList(){
-    ownedList = [];
-    for(const k in collection){
-      const ent = collection[k];
-      for(let i=0;i<ent.count;i++){
-        ownedList.push({ name: ent.name, rarity: ent.rarity, index: ent.index });
-      }
-    }
-  }
-
-  /***** Render functions *****/
-  function renderChest(open=false){
-    chestEl.style.backgroundImage = `url("${chestSvgDataURI(open)}")`;
-  }
-
-  function flashGlow(){
-    glowEl.classList.add('show');
-    setTimeout(()=> glowEl.classList.remove('show'), 700);
-  }
-
-  function renderGrid(){
-    gridEl.innerHTML = '';
-    // show 20 cells in fixed order of definitions, but display counts on those owned
-    for(let i=0;i<weaponDefs.length;i++){
-      const def = weaponDefs[i];
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.classList.add('rarity-' + def.rarity);
-      // icon
-      const img = document.createElement('img');
-      img.className = 'icon';
-      img.src = weaponDataURI(i);
-      img.alt = def.name;
-      cell.appendChild(img);
-      // count overlay if owned
-      const ent = collection[def.name];
-      const count = ent ? ent.count : 0;
-      if(count > 0){
-        const badge = document.createElement('div');
-        badge.className = 'count';
-        badge.textContent = count;
-        cell.appendChild(badge);
-      }
-      // clickable: when clicked, select the first owned instance of that weapon in ownedList
-      cell.onclick = () => {
-        // find the owned list index of the first instance of this weapon
-        const firstIdx = ownedList.findIndex(o => o.name === def.name);
-        if(firstIdx === -1){
-          selectedWeaponIndex = null;
-        } else {
-          selectedWeaponIndex = firstIdx; // select the first occurrence
-        }
-        // visually highlight by toggling selected class across cells by rebuilding a selected map
-        // We'll mark selected cell by adding .selected for visual feedback using the name match + selectedIndex mapping
-        updateSelectionVisual(def.name);
-      };
-      // highlight if selected corresponds to this weapon's selected instance
-      if(selectedWeaponIndex !== null){
-        const sel = ownedList[selectedWeaponIndex];
-        if(sel && sel.name === def.name){
-          cell.classList.add('selected');
-        }
-      }
-      gridEl.appendChild(cell);
-    }
-  }
-
-  function updateSelectionVisual(nameSelected){
-    // We will set .selected on the first matching cell
-    const cells = Array.from(gridEl.children);
-    cells.forEach((c, idx) => {
-      c.classList.remove('selected');
-      const def = weaponDefs[idx];
-      if(selectedWeaponIndex !== null){
-        const sel = ownedList[selectedWeaponIndex];
-        if(sel && sel.name === def.name){
-          c.classList.add('selected');
-        }
-      }
-    });
-  }
-
-  function refreshUI(){
-    goldEl.textContent = gold;
-    renderGrid();
-  }
-
-  /***** Actions *****/
+  // === actions ===
   function openChestAction(){
-    if(gold < 10){ alert('Not enough gold to open a chest!'); return; }
-    gold -= 10;
-    saveState();
-    updateGoldNow();
-    // animate chest open simple
-    renderChest(true);
-    flashGlow();
+    if(gold < 10){ alert('Not enough gold!'); return; }
+    gold -= 10; updateGoldUI(); saveState();
+    // animate chest & play sound
+    renderChest(true); flashGlow(); playChestSound();
     chestEl.classList.add('open');
-    // pick rarity and weapon
     const rarity = pickRarity();
-    const pick = pickWeaponByRarity(rarity) || randFromPool(weaponDefs.map((d,i)=>({...d,index:i})));
-    // add after small timeout so player sees chest animation
-    setTimeout(()=>{
-      addToCollection(pick);
+    const pick = pickWeaponByRarity(rarity) || weaponDefs[Math.floor(Math.random()*weaponDefs.length)];
+    setTimeout(()=> {
+      addToCollection({ name: pick.name, rarity: pick.rarity, index: pick.index });
       chestEl.classList.remove('open');
       renderChest(false);
-      refreshUI();
-      // quick toast
+      rebuildOwnedList();
+      renderGrid(); renderOverlayGrid();
       quickToast(`${pick.name} (${pick.rarity.toUpperCase()})`);
     }, 700);
   }
 
   function sellSelectedAction(){
-    if(selectedWeaponIndex === null){ alert('Select a weapon from your collection first (click a cell)'); return; }
-    const entry = ownedList[selectedWeaponIndex];
+    if(selectedOwnedIndex === null){ alert('Select a weapon first by clicking it in the grid'); return; }
+    const entry = ownedList[selectedOwnedIndex];
     if(!entry){ alert('Invalid selection'); return; }
-    const value = sellValues[entry.rarity] || 0;
-    // remove one copy
-    removeFromCollectionAtOwnedIndex(selectedWeaponIndex);
-    // clear selection
-    selectedWeaponIndex = null;
-    // add gold
-    gold += value;
-    saveState();
-    refreshUI();
-    updateGoldNow();
-    quickToast(`Sold ${entry.name} for ${value}g`);
+    const val = sellValues[entry.rarity] || 0;
+    const removed = removeOneOwnedAt(selectedOwnedIndex);
+    if(removed){ gold += val; playCoinSound(); saveState(); rebuildOwnedList(); selectedOwnedIndex = null; renderGrid(); renderOverlayGrid(); updateGoldUI(); quickToast(`Sold ${removed.name} for ${val}g`); }
   }
 
-  /***** small UI helpers *****/
-  function updateGoldNow(){ goldEl.textContent = gold; }
+  // === small UI helpers ===
+  function updateGoldUI(){ goldEl.textContent = gold; }
   function quickToast(text){
-    // temporary text on chest area
-    const ctx = chestEl;
     const t = document.createElement('div');
-    t.textContent = text;
-    t.style.position='absolute';
-    t.style.bottom='4px';
-    t.style.left='50%';
-    t.style.transform='translateX(-50%)';
-    t.style.fontSize='11px';
-    t.style.color='#fff';
-    t.style.pointerEvents='none';
-    t.style.padding='6px 8px';
-    t.style.background='rgba(0,0,0,0.5)';
-    t.style.borderRadius='6px';
-    t.style.border='1px solid rgba(255,255,255,0.04)';
-    t.style.zIndex='40';
-    chestEl.parentElement.appendChild(t);
-    setTimeout(()=> t.remove(), 1300);
+    t.textContent = text; t.style.position='absolute'; t.style.bottom='6px'; t.style.left='50%'; t.style.transform='translateX(-50%)';
+    t.style.padding='8px 12px'; t.style.background='rgba(0,0,0,0.6)'; t.style.borderRadius='8px'; t.style.fontSize='11px';
+    t.style.border='1px solid rgba(255,255,255,0.04)'; chestEl.parentElement.appendChild(t);
+    setTimeout(()=> t.remove(), 1400);
   }
 
-  /***** wiring *****/
+  // === init & wiring ===
   function init(){
     loadState();
+    // precompute index on defs
+    weaponDefs.forEach((d,i)=> d.index = i);
     rebuildOwnedList();
-    updateGoldNow();
+    updateGoldUI();
     renderChest(false);
-    refreshUI();
-    openBtn.addEventListener('click', openChestAction);
-    sellBtn.addEventListener('click', sellSelectedAction);
+    renderGrid();
+    renderOverlayGrid();
+    // set book icon
+    bookIcon.src = bookIconURI();
+
+    // audio start - try autoplay; browsers may block until user interaction
+    try {
+      // resume if suspended
+      if(audioCtx.state === 'suspended') audioCtx.resume();
+      startMusicLoop();
+    } catch(e){ console.warn('Audio init failed', e); }
+
+    // wire buttons
+    openBtn.addEventListener('click', ()=>{ // ensure audio resume on user interaction
+      if(audioCtx.state === 'suspended') audioCtx.resume().then(()=> startMusicLoop()).catch(()=>{});
+      openChestAction();
+    });
+    sellBtn.addEventListener('click', ()=>{ if(audioCtx.state === 'suspended') audioCtx.resume(); sellSelectedAction(); });
+
+    // book toggle
+    bookBtn.addEventListener('click', ()=>{
+      // resume audio if needed
+      if(audioCtx.state === 'suspended') audioCtx.resume().then(()=> startMusicLoop()).catch(()=>{});
+      overlay.style.display = 'flex';
+      playBookSound();
+      playChestSound(); // playful
+    });
+    closeOverlay.addEventListener('click', ()=>{ overlay.style.display='none'; playBookSound(); });
+
+    // keyboard support for mobile: ESC to close overlay
+    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ overlay.style.display='none'; } });
+
+    // allow tapping overlay background to close
+    overlay.addEventListener('click', (e)=>{ if(e.target === overlay) overlay.style.display='none'; });
+
+    // long-press on chest for inspect? (mobile nicety) - optional left as is
+
+    // load any visual assets (chest closed)
+    renderChest(false);
   }
 
+  // nice helper: try to autoplay on load; some browsers disallow until gesture
+  window.addEventListener('load', ()=>{
+    // attempt to resume context & start music
+    if(audioCtx.state === 'suspended'){
+      audioCtx.resume().then(()=> startMusicLoop()).catch(()=>{ /* no autoplay */ });
+    } else {
+      startMusicLoop();
+    }
+  });
+
+  // set overlay grid click to close on selection (optional)
+  overlayGrid.addEventListener('click', ()=>{ overlay.style.display='none'; });
+
+  // exports for actions
+  openBtn.addEventListener && openBtn.addEventListener('click', ()=>{});
+  sellBtn.addEventListener && sellBtn.addEventListener('click', ()=>{});
+
+  // start
   init();
 
 })();
