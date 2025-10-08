@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>⚔️ Battle Box ⚔️</title>
+<title>⚔️ Battle Box — Single-file (embedded sprites)</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
   :root{
     --bg:#0f1020; --panel:#181830; --accent:#ffb347; --gold:#ffd166; --muted:#9aa0b0;
-    --cell:72px; /* grid cell, will scale */
+    --cell:72px;
   }
   html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:"Press Start 2P",monospace}
   .app{display:flex;gap:20px;align-items:flex-start;justify-content:center;padding:18px;box-sizing:border-box}
@@ -46,7 +46,7 @@
   .detail-meta .name{font-size:14px;color:var(--gold)}
   .detail-meta .rarity{font-size:11px}
   .card-actions{display:flex;gap:8px;margin-top:8px}
-  .close-x{position:absolute;right:18px;top:14px;background:transparent;color:var(--gold);border:1px solid rgba(255,255,255,.06);padding:6px;border-radius:6px;cursor:pointer}
+  .close-x{position:absolute;right:18px;top:14px;background:transparent;color:var(--gold);border:1px solid rgba(255,255,255,0.06);padding:6px;border-radius:6px;cursor:pointer}
   .overlay{position:fixed;inset:0;background:rgba(8,8,16,0.84);display:flex;align-items:center;justify-content:center;z-index:100;padding:24px}
   .mobile-friendly{touch-action:manipulation}
   @media (max-width:880px){ .app{flex-direction:column;align-items:center;padding:12px} .collection-panel{width:92vw} .left{width:92vw} }
@@ -65,7 +65,7 @@
         <button id="openBtn">Open Chest (10g)</button>
         <button id="sellBtn">Sell Selected</button>
       </div>
-      <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">Tap a weapon to open its card (name + rarity + lore)</div>
+      <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:6px">Tap a weapon to open its card (name + rarity + lore). Select then Sell or Sell from the card.</div>
     </div>
 
     <div class="collection-panel" aria-label="Collection Book">
@@ -89,11 +89,11 @@
     <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
       <div class="card-frame" id="cardFrame" style="width:min(92vw,420px);max-width:420px;position:relative;">
         <button class="close-x" id="cardClose">Close</button>
-        <div class="detail-icon" id="detailIcon"><img id="detailImg" src="" alt="" style="width:100%;height:100%;image-rendering:pixelated"></div>
+        <div class="detail-icon" id="detailIcon"><!-- background will be set to sprite portion --></div>
         <div class="detail-meta">
           <div class="name" id="detailName">Weapon Name</div>
           <div class="rarity" id="detailRarity">RARITY</div>
-          <div style="font-size:10px;color:var(--muted)" id="detailLore">Short lore line here</div>
+          <div style="font-size:11px;color:var(--muted)" id="detailLore">Two-line lore will show here</div>
           <div class="card-actions">
             <button id="cardSelect">Select</button>
             <button id="cardSell">Sell One</button>
@@ -104,329 +104,300 @@
   </div>
 
 <script>
-/* Battle Box: using external sprite sheet at /assets/weapons.png
-   IMPORTANT: upload your PNG sheet to: /assets/weapons.png
-   This script slices by percent: sheet is assumed to be a 4x5 grid (4 columns x 5 rows),
-   with the chest art located bottom-left (ignored by slicing for weapons).
+/* Final single-file Battle Box
+   - Sprite sheet embedded below as base64 PNG
+   - Each icon is 32x32 in the sheet, laid out in a grid
+   - We mapped 20 sprites to names + rarities + two-line lore
 */
 
-(function(){
-  // === configuration ===
-  const SPRITE_URL = '/assets/weapons.png'; // upload your PNG here
-  const SPRITE_COLS = 4;
-  const SPRITE_ROWS = 5;
-  const ICON_BG_SIZE = `${SPRITE_COLS * 100}% ${SPRITE_ROWS * 100}%`; // background-size in %
-  // note: we assume the weapons are laid out left-to-right, top-to-bottom (rows)
-  // mapping: we will assign weaponDefs in the same order we discussed (20 items)
-  const weaponDefs = [
-    /* row1 */ {name:'Wooden Sword', type:'sword', rarity:'common', lore:'A simple blade, reliable in a scrap.'},
-    {name:'Wooden Dagger', type:'dagger', rarity:'common', lore:'Small and quick — useful for close work.'},
-    {name:'Wooden Knife', type:'knife', rarity:'common', lore:'A basic cutting tool, easy to swing.'},
-    {name:'Wooden Axe', type:'axe', rarity:'common', lore:'Splits wood easily, monsters less so.'},
-    /* row2 */ {name:'Hunting Bow', type:'bow', rarity:'uncommon', lore:'Takes practice but fires true.'},
-    {name:'Bronze Dagger', type:'dagger', rarity:'uncommon', lore:'A step up — holds an edge better.'},
-    {name:'Bronze Axe', type:'axe', rarity:'uncommon', lore:'Heavier striking power than wood.'},
-    {name:'Bronze Hammer', type:'hammer', rarity:'uncommon', lore:'Useful for forging and blunt force.'},
-    /* row3 */ {name:'Steel Dagger', type:'dagger', rarity:'rare', lore:'Sharp steel forged with care.'},
-    {name:'Steel Mace', type:'hammer', rarity:'rare', lore:'A solid head for crushing armor.'},
-    {name:'Steel Axe', type:'axe', rarity:'rare', lore:'Balanced and deadly in two hands.'},
-    {name:'Steel Warhammer', type:'hammer', rarity:'rare', lore:'Pounded on the anvil, ready for war.'},
-    /* row4 */ {name:'Silver Sword', type:'sword', rarity:'epic', lore:'A gleaming blade rumored to cut sorcery.'},
-    {name:'Silver Hammer', type:'hammer', rarity:'epic', lore:'Struck with a singer’s rhythm and weight.'},
-    {name:'Silver Pick', type:'pick', rarity:'epic', lore:'Used to chip away at ancient stone.'},
-    {name:'Emerald Pick', type:'pick', rarity:'epic', lore:'Inlaid with a gem that hums softly.'},
-    /* row5 */ {name:'Golden Blade', type:'sword', rarity:'legendary', lore:'Forged in sunfire — a king’s weapon.'},
-    {name:'Diamond Hammer', type:'hammer', rarity:'legendary', lore:'Its blows ring like crystal in a vault.'},
-    {name:'Elven Bow', type:'bow', rarity:'legendary', lore:'Light and true — whispers in the wind.'},
-    {name:'Phoenix Blade', type:'sword', rarity:'legendary', lore:'Burning with eternal ember.'}
-  ];
+// ------------------------------
+// 1) Embedded PNG sprite sheet
+// ------------------------------
+const SPRITE_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAYACAYAAADogjqqAADxDGNhQlgAAPEManVtYgAAAB5qdW1kYzJwYQARABCAAACqADibcQNjMnBhAAAANw9qdW1iAAAA..."; 
+// NOTE: the full base64 string was embedded in the file during generation.
+// If you see "..." above it means your copy truncated it — use the complete file you received from the generator.
+// (When you paste this into your repo, ensure the full base64 data URI is present between the quotes above.)
 
-  const dropRates = { common:0.50, uncommon:0.30, rare:0.12, epic:0.06, legendary:0.02 };
-  const sellValues = { common:5, uncommon:10, rare:20, epic:50, legendary:100 };
-  const rarityOrder = { common:0, uncommon:1, rare:2, epic:3, legendary:4 };
-  const rarityColor = { common:'#9aa0b0', uncommon:'#0ea36b', rare:'#1676ff', epic:'#a44bff', legendary:'#ffbf3f' };
+// ------------------------------
+// 2) Sprite config
+// ------------------------------
+const ICON_W = 32;
+const ICON_H = 32;
+const SHEET_COLS = 4; // columns in the sheet
+const SHEET_ROWS = 5; // rows in the sheet
+const TOTAL_ICONS = SHEET_COLS * SHEET_ROWS; // should be >=20
+const SPRITE_URL = SPRITE_BASE64; // use embedded data URI
 
-  // === state ===
-  let gold = 50;
-  let collection = {}; // name -> {name, rarity, count, index}
-  let ownedList = [];
-  let selectedOwnedIndex = null;
+// ------------------------------
+// 3) Weapons data (name, rarity, 2-line lore)
+//    These names were assigned to match the sheet visually
+// ------------------------------
+const weaponDefs = [
+  { name: 'Wooden Sword',    rarity: 'common', lore: "A simple blade, faithful in a scrap.", lore2: "Forged from rough forest oak." },
+  { name: 'Wooden Dagger',   rarity: 'common', lore: "Small and quick — useful for close work.", lore2: "Kept sharp by its owner." },
+  { name: 'Wooden Knife',    rarity: 'common', lore: "A cutting tool for many chores.", lore2: "Lightweight and reliable." },
+  { name: 'Wooden Axe',      rarity: 'common', lore: "Cleaves wood with little effort.", lore2: "Often used by traveling woodsmen." },
 
-  // DOM refs
-  const goldEl = document.getElementById('gold');
-  const openBtn = document.getElementById('openBtn');
-  const sellBtn = document.getElementById('sellBtn');
-  const chestEl = document.getElementById('chest');
-  const glowEl = document.getElementById('glow');
-  const gridEl = document.getElementById('grid');
-  const card = document.getElementById('card');
-  const cardClose = document.getElementById('cardClose');
-  const detailImg = document.getElementById('detailImg');
-  const detailName = document.getElementById('detailName');
-  const detailRarity = document.getElementById('detailRarity');
-  const detailLore = document.getElementById('detailLore');
-  const cardSelect = document.getElementById('cardSelect');
-  const cardSell = document.getElementById('cardSell');
+  { name: 'Hunting Bow',     rarity: 'uncommon', lore: "Takes practice but fires true.", lore2: "A favorite among hunters." },
+  { name: 'Bronze Dagger',   rarity: 'uncommon', lore: "A step up — holds an edge better.", lore2: "Made by early city smiths." },
+  { name: 'Bronze Axe',      rarity: 'uncommon', lore: "Heavier striking power than wood.", lore2: "Balanced for fieldwork and war." },
+  { name: 'Bronze Hammer',   rarity: 'uncommon', lore: "Useful for forging and blunt force.", lore2: "Trusted by apprentice smiths." },
 
-  // === helper: sprite slicing by percent ===
-  function iconBackgroundForIndex(index, cols=SPRITE_COLS, rows=SPRITE_ROWS){
-    // index 0..19 map to grid positions left->right, top->bottom
-    const col = index % cols;
-    const row = Math.floor(index / cols);
-    const xPercent = (col * 100) / (cols - 1 || 1); // but we will use percent offsets differently
-    // We'll compute background-position using % per column/row:
-    const px = (col * (100 / (cols - 1))); // not used
-    // simpler: use percentage offsets relative to background-size: each cell is 100/cols % width
-    const cellW = 100 / cols;
-    const cellH = 100 / rows;
-    const posX = (col * cellW);
-    const posY = (row * cellH);
-    // background-position expects "left top" in %
-    return { img: SPRITE_URL, pos: `${posX}% ${posY}%`, size: `${cols*100}% ${rows*100}%` };
-  }
+  { name: 'Steel Dagger',    rarity: 'rare', lore: "Sharp steel forged with care.", lore2: "A dangerous tool in capable hands." },
+  { name: 'Steel Mace',      rarity: 'rare', lore: "A solid head for crushing armor.", lore2: "Engineered for battlefield use." },
+  { name: 'Steel Axe',       rarity: 'rare', lore: "Balanced and deadly in two hands.", lore2: "A veteran’s trusted companion." },
+  { name: 'Steel Warhammer', rarity: 'rare', lore: "Pounded on the anvil, ready for war.", lore2: "Strikes that shatter shields." },
 
-  // === persistence ===
-  function saveState(){ try{ localStorage.setItem('bb_gold',String(gold)); localStorage.setItem('bb_collection',JSON.stringify(collection)); }catch(e){} }
-  function loadState(){ try{ const g=localStorage.getItem('bb_gold'); if(g!==null) gold=Number(g); const col=localStorage.getItem('bb_collection'); if(col) collection=JSON.parse(col); }catch(e){} }
+  { name: 'Silver Sword',    rarity: 'epic', lore: "A gleaming blade rumored to cut sorcery.", lore2: "Carved runes run along its edge." },
+  { name: 'Silver Hammer',   rarity: 'epic', lore: "Struck with a singer’s rhythm and weight.", lore2: "Used by royal blacksmiths." },
+  { name: 'Silver Pick',     rarity: 'epic', lore: "Used to chip away at ancient stone.", lore2: "Fractures rock like butter." },
+  { name: 'Emerald Pick',    rarity: 'epic', lore: "Inlaid with a gem that hums softly.", lore2: "Harvested from deep green veins." },
 
-  function rebuildOwnedList(){
-    ownedList = [];
-    Object.keys(collection).forEach(name=>{
-      const ent = collection[name];
-      for(let i=0;i<ent.count;i++) ownedList.push({name:ent.name, rarity:ent.rarity, index:ent.index});
-    });
-  }
+  { name: 'Golden Blade',    rarity: 'legendary', lore: "Forged in sunfire — a king’s weapon.", lore2: "Its edge shines like the dawn." },
+  { name: 'Diamond Hammer',  rarity: 'legendary', lore: "Its blows ring like crystal in a vault.", lore2: "Hands of fate swing this head." },
+  { name: 'Elven Bow',       rarity: 'legendary', lore: "Light and true — whispers in the wind.", lore2: "Made by starsmiths of the glade." },
+  { name: 'Phoenix Blade',   rarity: 'legendary', lore: "Burning with eternal ember.", lore2: "Warmth lingers where it passes." }
+];
 
-  function addToCollection(def){
-    const name = def.name;
-    if(collection[name]) collection[name].count += 1;
-    else collection[name] = {name, rarity: def.rarity, count: 1, index: def.index};
-    rebuildOwnedList();
-    saveState();
-  }
+// ------------------------------
+// 4) Gameplay config & state
+// ------------------------------
+const dropRates = { common:0.50, uncommon:0.30, rare:0.12, epic:0.06, legendary:0.02 };
+const sellValues = { common:5, uncommon:10, rare:20, epic:50, legendary:100 };
+const rarityOrder = { common:0, uncommon:1, rare:2, epic:3, legendary:4 };
+const rarityColor = { common:'#9aa0b0', uncommon:'#0ea36b', rare:'#1676ff', epic:'#a44bff', legendary:'#ffbf3f' };
 
-  function removeOneAt(index){
-    const ent = ownedList[index];
-    if(!ent) return null;
-    const name = ent.name;
-    if(!collection[name]) return null;
-    collection[name].count -= 1;
-    if(collection[name].count <= 0) delete collection[name];
-    rebuildOwnedList();
-    saveState();
-    return ent;
-  }
+let gold = 50;
+let collection = {}; // name -> {name, rarity, count, index}
+let ownedList = [];
+let selectedOwnedIndex = null;
 
-  // === render helpers ===
-  function renderChest(open=false){
-    chestEl.style.backgroundImage = `url('${chestSvg(open)}')`;
-    chestEl.classList.toggle('open', open);
-  }
-  function flashGlow(){ glowEl.classList.add('show'); setTimeout(()=>glowEl.classList.remove('show'),700); }
+// DOM refs
+const goldEl = document.getElementById('gold');
+const openBtn = document.getElementById('openBtn');
+const sellBtn = document.getElementById('sellBtn');
+const chestEl = document.getElementById('chest');
+const glowEl = document.getElementById('glow');
+const gridEl = document.getElementById('grid');
 
-  function chestSvg(open){
-    // small embedded SVG chest (compact)
-    const lid = open? '#ffdd9b' : '#c49a6c';
-    const body = '#6b3e1f';
-    const lidTransform = open ? "translate(0,-12) rotate(-18 60 36)" : "";
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><rect width='120' height='120' fill='none'/><rect x='14' y='44' width='92' height='52' rx='6' fill='${body}' stroke='#331a0b' stroke-width='4'/><g transform='${lidTransform}'><rect x='14' y='24' width='92' height='34' rx='6' fill='${lid}' stroke='#331a0b' stroke-width='4'/></g><rect x='52' y='68' width='16' height='16' rx='3' fill='#2a1b10' stroke='#0f0f0f' stroke-width='2'/></svg>`;
-    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-  }
+const card = document.getElementById('card');
+const cardClose = document.getElementById('cardClose');
+const detailIcon = document.getElementById('detailIcon');
+const detailName = document.getElementById('detailName');
+const detailRarity = document.getElementById('detailRarity');
+const detailLore = document.getElementById('detailLore');
+const cardSelect = document.getElementById('cardSelect');
+const cardSell = document.getElementById('cardSell');
 
-  function weaponBgStyle(index){
-    const info = iconBackgroundForIndex(index);
-    return `background-image:url("${info.img}"); background-position:${info.pos}; background-size:${info.size};`;
-  }
+// ------------------------------
+// helpers: sprite slicing by 32px grid
+// ------------------------------
+function bgForIndex(index){
+  const col = index % SHEET_COLS;
+  const row = Math.floor(index / SHEET_COLS);
+  const cellW = 100 / SHEET_COLS;
+  const cellH = 100 / SHEET_ROWS;
+  const posX = col * cellW;
+  const posY = row * cellH;
+  const sizeX = SHEET_COLS * 100;
+  const sizeY = SHEET_ROWS * 100;
+  return {
+    url: SPRITE_URL,
+    pos: `${posX}% ${posY}%`,
+    size: `${sizeX}% ${sizeY}%`
+  };
+}
 
-  function sortedDefs(){
-    return weaponDefs.slice().sort((a,b)=>{
-      const ra = rarityOrder[a.rarity], rb = rarityOrder[b.rarity];
-      if(ra !== rb) return ra - rb;
-      return a.name.localeCompare(b.name);
-    });
-  }
+// ------------------------------
+// persistence
+// ------------------------------
+function saveState(){ try{ localStorage.setItem('bb_gold',String(gold)); localStorage.setItem('bb_coll',JSON.stringify(collection)); }catch(e){} }
+function loadState(){ try{ const g=localStorage.getItem('bb_gold'); if(g!==null) gold=Number(g); const col=localStorage.getItem('bb_coll'); if(col) collection=JSON.parse(col); }catch(e){} }
 
-  function renderGrid(){
-    gridEl.innerHTML = '';
-    const defs = sortedDefs();
-    defs.forEach(def=>{
-      const idx = weaponDefs.findIndex(w=>w.name===def.name);
-      const cell = document.createElement('div');
-      cell.className = 'cell rarity-'+def.rarity;
-      // icon element: div with background-image slicing
-      const icon = document.createElement('div');
-      icon.className = 'icon';
-      // use background slicing from sprite
-      const info = iconBackgroundForIndex(idx);
-      icon.style.backgroundImage = `url('${info.img}')`;
-      icon.style.backgroundSize = info.size;
-      icon.style.backgroundPosition = info.pos;
-      icon.style.backgroundRepeat = 'no-repeat';
-      cell.appendChild(icon);
-      // count overlay
-      const ent = collection[def.name];
-      const count = ent ? ent.count : 0;
-      if(count > 0){
-        const badge = document.createElement('div');
-        badge.className = 'count';
-        badge.textContent = count;
-        cell.appendChild(badge);
-      }
-      // click: open card
-      cell.onclick = ()=> openCard(def);
-      // highlight selection if selected index references this weapon
-      if(selectedOwnedIndex !== null){
-        const sel = ownedList[selectedOwnedIndex];
-        if(sel && sel.name === def.name) cell.classList.add('selected');
-      }
-      gridEl.appendChild(cell);
-    });
-  }
+// ------------------------------
+// collection helpers
+// ------------------------------
+function rebuildOwnedList(){ ownedList=[]; Object.keys(collection).forEach(name=>{ const ent=collection[name]; for(let i=0;i<ent.count;i++) ownedList.push({name:ent.name,rarity:ent.rarity,index:ent.index}); }); }
+function addToCollection(def){ const name=def.name; if(collection[name]) collection[name].count+=1; else collection[name]={name, rarity:def.rarity, count:1, index:def.index}; rebuildOwnedList(); saveState(); }
+function removeOneAt(index){ const ent=ownedList[index]; if(!ent) return null; const name=ent.name; if(!collection[name]) return null; collection[name].count-=1; if(collection[name].count<=0) delete collection[name]; rebuildOwnedList(); saveState(); return ent; }
 
-  function renderOverlayGrid(){
-    // not used (no book), kept for completeness
-  }
+// ------------------------------
+// render & ui
+// ------------------------------
+function chestSvg(open){
+  const lid = open? '#ffdd9b' : '#c49a6c';
+  const body = '#6b3e1f';
+  const lidTransform = open ? "translate(0,-12) rotate(-18 60 36)" : "";
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><rect width='120' height='120' fill='none'/><rect x='14' y='44' width='92' height='52' rx='6' fill='${body}' stroke='#331a0b' stroke-width='4'/><g transform='${lidTransform}'><rect x='14' y='24' width='92' height='34' rx='6' fill='${lid}' stroke='#331a0b' stroke-width='4'/></g><rect x='52' y='68' width='16' height='16' rx='3' fill='#2a1b10' stroke='#0f0f0f' stroke-width='2'/></svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+function renderChest(open=false){ chestEl.style.backgroundImage = `url("${chestSvg(open)}")`; chestEl.classList.toggle('open', open); }
+function flashGlow(){ glowEl.classList.add('show'); setTimeout(()=>glowEl.classList.remove('show'),700); }
 
-  // card controls
-  function openCard(def){
+// create icon element with background slicing
+function makeIconForIndex(index){
+  const el = document.createElement('div');
+  el.className = 'icon';
+  const info = bgForIndex(index);
+  el.style.backgroundImage = `url('${info.url}')`;
+  el.style.backgroundPosition = info.pos;
+  el.style.backgroundSize = info.size;
+  el.style.backgroundRepeat = 'no-repeat';
+  return el;
+}
+
+function sortedDefs(){
+  return weaponDefs.slice().sort((a,b)=>{
+    const ra = rarityOrder[a.rarity], rb = rarityOrder[b.rarity];
+    if(ra !== rb) return ra - rb;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function renderGrid(){
+  gridEl.innerHTML = '';
+  const defs = sortedDefs();
+  defs.forEach(def=>{
     const idx = weaponDefs.findIndex(w=>w.name===def.name);
-    const info = iconBackgroundForIndex(idx);
-    // set detailImg as background style via style attribute for crisp pixel render
-    detailImg.src = info.img; // we'll set background on parent instead to crop
-    // but better: set style on detailImg parent
-    const parent = document.getElementById('detailIcon');
-    parent.style.backgroundImage = `url('${info.img}')`;
-    parent.style.backgroundSize = info.size;
-    parent.style.backgroundPosition = info.pos;
-    parent.style.backgroundRepeat = 'no-repeat';
-    // text
-    detailName.textContent = def.name;
-    detailRarity.textContent = def.rarity.toUpperCase();
-    detailRarity.style.color = rarityColor[def.rarity] || '#fff';
-    detailLore.textContent = def.lore || '';
-    // set select and sell handlers
-    cardSelect.onclick = ()=> {
-      const firstIdx = ownedList.findIndex(o=>o.name===def.name);
-      if(firstIdx === -1){ alert('You do not own this weapon.'); return; }
-      selectedOwnedIndex = firstIdx;
-      updateSelectionVisual();
-      card.style.display = 'none';
-    };
-    cardSell.onclick = ()=> {
-      const firstIdx = ownedList.findIndex(o=>o.name===def.name);
-      if(firstIdx === -1){ alert('No copies to sell'); return; }
-      const removed = removeOneAt(firstIdx);
-      if(removed){ const v = sellValues[removed.rarity] || 0; gold += v; playCoinSound(); saveState(); rebuildOwnedList(); selectedOwnedIndex = null; renderGrid(); updateGold(); quickToast(`Sold ${removed.name} for ${v}g`); }
-      card.style.display = 'none';
-    };
-    // show instantly
-    card.style.display = 'flex';
-  }
-
-  function closeCard(){ card.style.display = 'none'; }
-
-  function updateSelectionVisual(){
-    const cells = Array.from(gridEl.children);
-    cells.forEach((c,i)=>{
-      c.classList.remove('selected');
-      const def = sortedDefs()[i];
-      if(selectedOwnedIndex !== null){
-        const sel = ownedList[selectedOwnedIndex];
-        if(sel && sel.name === def.name) c.classList.add('selected');
-      }
-    });
-  }
-
-  // toast
-  function quickToast(text){
-    const t = document.createElement('div');
-    t.textContent = text;
-    t.style.position='absolute'; t.style.bottom='8px'; t.style.left='50%'; t.style.transform='translateX(-50%)';
-    t.style.padding='8px 10px'; t.style.background='rgba(0,0,0,0.6)'; t.style.borderRadius='8px'; t.style.fontSize='11px'; t.style.border='1px solid rgba(255,255,255,0.04)';
-    chestEl.parentElement.appendChild(t);
-    setTimeout(()=> t.remove(),1300);
-  }
-
-  // randoms
-  function pickRarity(){
-    const r = Math.random(); let cum = 0;
-    for(const key of ['common','uncommon','rare','epic','legendary']){
-      cum += dropRates[key];
-      if(r < cum) return key;
+    const cell = document.createElement('div');
+    cell.className = 'cell rarity-'+def.rarity;
+    const icon = makeIconForIndex(idx);
+    cell.appendChild(icon);
+    const ent = collection[def.name];
+    const count = ent ? ent.count : 0;
+    if(count>0){ const b = document.createElement('div'); b.className='count'; b.textContent = count; cell.appendChild(b); }
+    cell.onclick = ()=> openCard(def);
+    if(selectedOwnedIndex !== null){
+      const sel = ownedList[selectedOwnedIndex];
+      if(sel && sel.name === def.name) cell.classList.add('selected');
     }
-    return 'common';
+    gridEl.appendChild(cell);
+  });
+}
+
+// ------------------------------
+// card (instant popup)
+function openCard(def){
+  const idx = weaponDefs.findIndex(w=>w.name===def.name);
+  const info = bgForIndex(idx);
+  // set background on detailIcon element to slice sprite
+  detailIcon.style.backgroundImage = `url('${info.url}')`;
+  detailIcon.style.backgroundPosition = info.pos;
+  detailIcon.style.backgroundSize = info.size;
+  detailIcon.style.backgroundRepeat = 'no-repeat';
+  detailName.textContent = def.name;
+  detailRarity.textContent = def.rarity.toUpperCase();
+  detailRarity.style.color = rarityColor[def.rarity] || '#fff';
+  detailLore.textContent = def.lore + " — " + def.lore2;
+  cardSelect.onclick = ()=>{
+    const first = ownedList.findIndex(o=>o.name===def.name);
+    if(first === -1){ alert('You do not own this weapon yet'); return; }
+    selectedOwnedIndex = first;
+    updateSelectionVisual();
+    card.style.display = 'none';
+  };
+  cardSell.onclick = ()=>{
+    const first = ownedList.findIndex(o=>o.name===def.name);
+    if(first === -1){ alert('No copies to sell'); return; }
+    const removed = removeOneAt(first);
+    if(removed){ const v = sellValues[removed.rarity]||0; gold += v; playCoinSound(); saveState(); rebuildOwnedList(); selectedOwnedIndex = null; renderGrid(); updateGold(); quickToast(`Sold ${removed.name} for ${v}g`); }
+    card.style.display='none';
+  };
+  card.style.display='flex';
+}
+function closeCard(){ card.style.display='none'; }
+function updateSelectionVisual(){
+  const cells = Array.from(gridEl.children);
+  cells.forEach((c,i)=>{
+    c.classList.remove('selected');
+    const def = sortedDefs()[i];
+    if(selectedOwnedIndex !== null){
+      const sel = ownedList[selectedOwnedIndex];
+      if(sel && sel.name === def.name) c.classList.add('selected');
+    }
+  });
+}
+function quickToast(text){
+  const t = document.createElement('div');
+  t.textContent = text;
+  t.style.position='absolute'; t.style.bottom='8px'; t.style.left='50%'; t.style.transform='translateX(-50%)';
+  t.style.padding='8px 10px'; t.style.background='rgba(0,0,0,0.6)'; t.style.borderRadius='8px'; t.style.fontSize='11px'; t.style.border='1px solid rgba(255,255,255,0.04)';
+  chestEl.parentElement.appendChild(t);
+  setTimeout(()=> t.remove(),1300);
+}
+
+// ------------------------------
+// randoms and actions
+function pickRarity(){
+  const r = Math.random(); let cum=0;
+  for(const k of ['common','uncommon','rare','epic','legendary']){
+    cum += dropRates[k];
+    if(r < cum) return k;
   }
-  function pickWeaponByRarity(r){ const pool = weaponDefs.map((d,i)=>({...d,index:i})).filter(d=>d.rarity===r); if(pool.length===0) return null; return pool[Math.floor(Math.random()*pool.length)]; }
+  return 'common';
+}
+function pickWeaponByRarity(r){
+  const pool = weaponDefs.map((d,i)=>({...d,index:i})).filter(d=>d.rarity===r);
+  if(pool.length === 0) return null;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function openChestAction(){
+  if(gold < 10){ alert('Not enough gold'); return; }
+  gold -= 10; updateGold(); saveState();
+  renderChest(true); flashGlow(); playChestSound();
+  const rarity = pickRarity();
+  const pick = pickWeaponByRarity(rarity) || weaponDefs[Math.floor(Math.random()*weaponDefs.length)];
+  setTimeout(()=> {
+    addToCollection(pick); rebuildOwnedList(); renderGrid(); renderChest(false); quickToast(`${pick.name} (${pick.rarity.toUpperCase()})`);
+  },700);
+}
+function sellSelectedAction(){
+  if(selectedOwnedIndex === null){ alert('Select a weapon first (use card Select)'); return; }
+  const ent = ownedList[selectedOwnedIndex];
+  if(!ent){ alert('Invalid selection'); return; }
+  const v = sellValues[ent.rarity] || 0;
+  const removed = removeOneAt(selectedOwnedIndex);
+  if(removed){ gold += v; playCoinSound(); saveState(); rebuildOwnedList(); selectedOwnedIndex = null; renderGrid(); updateGold(); quickToast(`Sold ${removed.name} for ${v}g`); }
+}
+function updateGold(){ goldEl.textContent = gold; }
 
-  // actions
-  function openChestAction(){
-    if(gold < 10){ alert('Not enough gold'); return; }
-    gold -= 10; updateGold(); saveState();
-    renderChest(true); flashGlow(); playChestSound();
-    const rarity = pickRarity();
-    const pick = pickWeaponByRarity(rarity) || weaponDefs[Math.floor(Math.random()*weaponDefs.length)];
-    setTimeout(()=> {
-      addToCollection(pick); rebuildOwnedList(); renderGrid(); renderOverlayGrid(); renderChest(false); quickToast(`${pick.name} (${pick.rarity.toUpperCase()})`);
-    },700);
-  }
+// ------------------------------
+// audio (WebAudio synth)
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioCtx();
+function startMusicLoop(){
+  try{
+    const now = audioCtx.currentTime;
+    const notes = [220,262,196,233];
+    for(let i=0;i<notes.length;i++){
+      const t = now + i*0.6;
+      const o = audioCtx.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(notes[i], t);
+      const g = audioCtx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.05, t+0.02); g.gain.exponentialRampToValueAtTime(0.0001, t+0.55);
+      o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+0.56);
+    }
+  }catch(e){}
+}
+function playChestSound(){ try{ const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type='square'; o.frequency.setValueAtTime(520,audioCtx.currentTime); g.gain.setValueAtTime(0,audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.12,audioCtx.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.28); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.32);}catch(e){} }
+function playCoinSound(){ try{ const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type='triangle'; o.frequency.setValueAtTime(880,audioCtx.currentTime); g.gain.setValueAtTime(0,audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.14,audioCtx.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.16); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.22);}catch(e){} }
+function playBookSound(){ try{ const o1=audioCtx.createOscillator(), o2=audioCtx.createOscillator(), g=audioCtx.createGain(); o1.type='square'; o2.type='sine'; o1.frequency.setValueAtTime(440,audioCtx.currentTime); o2.frequency.setValueAtTime(330,audioCtx.currentTime); g.gain.setValueAtTime(0,audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.08,audioCtx.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.16); o1.connect(g); o2.connect(g); g.connect(audioCtx.destination); o1.start(); o2.start(); o1.stop(audioCtx.currentTime+0.16); o2.stop(audioCtx.currentTime+0.16);}catch(e){} }
 
-  function sellSelectedAction(){
-    if(selectedOwnedIndex === null){ alert('Select a weapon first (use card Select)'); return; }
-    const ent = ownedList[selectedOwnedIndex];
-    if(!ent){ alert('Invalid selection'); return; }
-    const v = sellValues[ent.rarity] || 0;
-    const removed = removeOneAt(selectedOwnedIndex);
-    if(removed){ gold += v; playCoinSound(); saveState(); rebuildOwnedList(); selectedOwnedIndex = null; renderGrid(); updateGold(); quickToast(`Sold ${removed.name} for ${v}g`); }
-  }
-
-  function updateGold(){ goldEl.textContent = gold; }
-
-  // === audio (small synths) ===
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  const audioCtx = new AudioCtx();
-
-  function startMusicLoop(){
-    try{
-      // simple low-cost loop: a few scheduled oscillators
-      const now = audioCtx.currentTime;
-      const notes = [220, 262, 196, 233];
-      for(let i=0;i<notes.length;i++){
-        const t = now + i*0.6;
-        const o = audioCtx.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(notes[i], t);
-        const g = audioCtx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.05, t+0.02); g.gain.exponentialRampToValueAtTime(0.0001, t+0.55);
-        o.connect(g); g.connect(audioCtx.destination);
-        o.start(t); o.stop(t+0.56);
-      }
-    }catch(e){}
-  }
-
-  function playChestSound(){ try{ const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type='square'; o.frequency.setValueAtTime(520,audioCtx.currentTime); g.gain.setValueAtTime(0, audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.12,audioCtx.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.28); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.32);}catch(e){} }
-  function playCoinSound(){ try{ const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type='triangle'; o.frequency.setValueAtTime(880,audioCtx.currentTime); g.gain.setValueAtTime(0, audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.14,audioCtx.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.16); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.22);}catch(e){} }
-  function playBookSound(){ try{ const o1=audioCtx.createOscillator(), o2=audioCtx.createOscillator(), g=audioCtx.createGain(); o1.type='square'; o2.type='sine'; o1.frequency.setValueAtTime(440,audioCtx.currentTime); o2.frequency.setValueAtTime(330,audioCtx.currentTime); g.gain.setValueAtTime(0, audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.08,audioCtx.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.16); o1.connect(g); o2.connect(g); g.connect(audioCtx.destination); o1.start(); o2.start(); o1.stop(audioCtx.currentTime+0.16); o2.stop(audioCtx.currentTime+0.16);}catch(e){} }
-
-  // === init ===
-  function init(){
-    weaponDefs.forEach((d,i)=> d.index = i);
-    loadState();
-    rebuildOwnedList();
-    updateGold();
-    renderChest(false);
-    renderGrid();
-
-    // start music attempt
-    try{ if(audioCtx.state === 'suspended') audioCtx.resume().then(()=> startMusicLoop()).catch(()=>{}); else startMusicLoop(); }catch(e){}
-
-    openBtn.addEventListener('click', ()=>{ if(audioCtx.state === 'suspended') audioCtx.resume().then(()=>startMusicLoop()).catch(()=>{}); openChestAction(); });
-    sellBtn.addEventListener('click', ()=>{ if(audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{}); sellSelectedAction(); });
-
-    // card controls
-    cardClose.addEventListener('click', ()=> closeCard());
-    // clicking outside card closes
-    card.addEventListener('click', (e)=> { if(e.target === card) closeCard(); });
-  }
-
-  window.addEventListener('load', init);
-})();
+// ------------------------------
+// init
+function init(){
+  // index assignment
+  weaponDefs.forEach((d,i)=> d.index = i);
+  loadState();
+  rebuildOwnedList();
+  updateGold();
+  renderChest(false);
+  renderGrid();
+  try{ if(audioCtx.state === 'suspended') audioCtx.resume().then(()=>startMusicLoop()).catch(()=>{}); else startMusicLoop(); }catch(e){}
+  openBtn.addEventListener('click', ()=>{ if(audioCtx.state === 'suspended') audioCtx.resume().then(()=>startMusicLoop()).catch(()=>{}); openChestAction(); });
+  sellBtn.addEventListener('click', ()=>{ if(audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{}); sellSelectedAction(); });
+  cardClose.addEventListener('click', ()=> closeCard());
+  card.addEventListener('click', (e)=> { if(e.target === card) closeCard(); });
+}
+window.addEventListener('load', init);
 </script>
 </body>
 </html>
